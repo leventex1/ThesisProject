@@ -12,8 +12,7 @@ int main(int argc, char* argv[])
 		std::cout << argv[i] << std::endl;
 	}
 
-	Test();
-
+	
 
 	return 0;
 }
