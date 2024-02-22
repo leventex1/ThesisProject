@@ -92,6 +92,30 @@ void Model::Load(const std::string& filePath)
 	}
 }
 
+bool Model::IsModelCorrect() const
+{
+	assert(m_RootLayer != nullptr && "No layer available!");
+
+	std::shared_ptr<Layer> nextLayer = m_RootLayer->NextLayer;
+	LayerShape layerShape = m_RootLayer->GetLayerShape();
+	LayerShape nextLayerShape;
+
+
+	while(nextLayer)
+	{
+		nextLayerShape = nextLayer->GetLayerShape();
+
+		if (layerShape.OutputRows != nextLayerShape.InputRows ||
+			layerShape.OutputCols != nextLayerShape.InputCols ||
+			layerShape.OutputDepth != nextLayerShape.InputDepth)
+			return false;
+
+		layerShape = nextLayerShape;
+	}
+
+	return true;
+}
+
 ModelShape Model::GetModelShape() const
 {
 	assert(m_RootLayer != nullptr && "No layer available!");

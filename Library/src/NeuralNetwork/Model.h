@@ -30,6 +30,7 @@ public:
 	void Save(const std::string& filePath) const;
 	void Load(const std::string& filePath);
 
+	bool IsModelCorrect() const;
 	ModelShape GetModelShape() const;
 
 private:

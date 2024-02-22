@@ -18,9 +18,10 @@ int main(int argc, char* argv[])
 	myModel.AddLayer(std::make_shared<mogi::DenseLayer>(2, 3, mogi::Sigmoid()));
 	myModel.AddLayer(std::make_shared<mogi::DenseLayer>(3, 1, mogi::Sigmoid()));
 
+	assert(myModel.IsModelCorrect() && "Model definition not correct!");
 	assert(dataset.CheckModelCompatibility(myModel) && "Model is not dataset compatible!");
 
-	for(size_t epoch = 0; epoch < 1000; epoch++)
+	for(size_t epoch = 0; epoch < 100000; epoch++)
 	{
 
 		for (size_t t = 0; t < dataset.GetEpochSize(); t++)
