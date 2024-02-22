@@ -17,13 +17,21 @@ public:
 	virtual ~Tensor();
 
 	inline const float* GetData() const { return m_Data; }
+	inline float* GetData() { return m_Data; }
 	float GetAt(size_t i) const;
 	void SetAt(size_t i, float value);
 
 	virtual size_t GetSize() const = 0;
 
-	void Map(std::function<float(float v)> mapper) const;
+	void Map(std::function<float(float v)> mapper);
+	void ElementWise(const Tensor& other, std::function<float(float v1, float v2)> operation);
+
 	virtual std::string ToString() const;
+
+	inline Tensor& Add(const Tensor& other) { ElementWise(other, [](float v1, float v2) -> float { return v1 + v2; }); return *this; }
+	inline Tensor& Sub(const Tensor& other) { ElementWise(other, [](float v1, float v2) -> float { return v1 - v2; }); return *this; }
+	inline Tensor& Mult(const Tensor& other) { ElementWise(other, [](float v1, float v2) -> float { return v1 * v2; }); return *this; }
+	inline Tensor& Div(const Tensor& other) { ElementWise(other, [](float v1, float v2) -> float { return v1 / v2; }); return *this; }
 
 protected:
 	void Alloc(size_t size);

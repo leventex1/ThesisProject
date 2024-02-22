@@ -18,7 +18,7 @@ public:
 	void SetAt(size_t row, size_t col, float value);
 
 	inline size_t GetRows() const { return m_Rows; }
-	inline size_t GetCols() const { return m_Rows; }
+	inline size_t GetCols() const { return m_Cols; }
 
 private:
 	size_t m_Rows, m_Cols;

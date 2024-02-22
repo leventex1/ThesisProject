@@ -54,11 +54,20 @@ Tensor::Tensor(Tensor&& other) noexcept
 	other.m_Data = nullptr;
 }
 
-void Tensor::Map(std::function<float(float v)> mapper) const
+void Tensor::Map(std::function<float(float v)> mapper)
 {
 	for (size_t i = 0; i < GetSize(); i++)
 	{
 		m_Data[i] = mapper(m_Data[i]);
+	}
+}
+
+void Tensor::ElementWise(const Tensor& other, std::function<float(float v1, float v2)> operation)
+{
+	assert(GetSize() == other.GetSize() && "Tensor sizes not match!");
+	for (size_t i = 0; i < GetSize(); i++)
+	{
+		m_Data[i] = operation(m_Data[i], other.m_Data[i]);
 	}
 }
 
@@ -79,7 +88,7 @@ std::string Tensor::ToString() const
 	std::stringstream ss;
 	for(size_t i = 0; i < GetSize(); i++)
 	{
-		ss << " " << m_Data[i];
+		ss << (i == 0 ? "" : " ") << m_Data[i];
 	}
 	return ss.str();
 }
