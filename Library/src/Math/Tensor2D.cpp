@@ -31,6 +31,16 @@ Tensor2D::Tensor2D(const std::initializer_list<std::initializer_list<float>>& in
 	}
 }
 
+Tensor2D::Tensor2D(size_t rows, size_t cols, float* data)
+	: m_Rows(rows), m_Cols(cols), Tensor(data)
+{
+}
+
+Tensor2D::Tensor2D(size_t rows, size_t cols, const float* data)
+	: m_Rows(rows), m_Cols(cols), Tensor(data, rows * cols)
+{
+}
+
 float Tensor2D::GetAt(size_t row, size_t col) const
 {
 	size_t index = row * m_Cols + col;

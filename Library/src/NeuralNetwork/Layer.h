@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <string>
 #include "Core.h"
-#include "../Math/Tensor2D.h"
+#include "../Math/Tensor3D.h"
 #include "CostF.h"
 
 
@@ -21,7 +21,7 @@ class LIBRARY_API Layer
 public:
 	virtual ~Layer() { }
 
-	virtual std::vector<Tensor2D> FeedForward(const std::vector<Tensor2D>& inputs) const = 0;
+	virtual Tensor3D FeedForward(const Tensor3D& inputs) const = 0;
 
 	/*
 		Recursive backpropagation learning algorithm.
@@ -30,8 +30,10 @@ public:
 		Than calculate the updated parameters respect to the returned costs.
 
 		Returns the derivated cost respect to the inputs.
+
+		TODO: implement bacch gradient descent.
 	*/
-	virtual std::vector<Tensor2D> BackPropagation(const std::vector<Tensor2D>& inputs, const CostFunction& costFunction, float learningRate) = 0;
+	virtual Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate) = 0;
 
 	virtual LayerShape GetLayerShape() const = 0;
 

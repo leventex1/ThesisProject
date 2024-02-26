@@ -5,6 +5,25 @@
 
 namespace_start
 
+Tensor2D SliceTensor(const Tensor3D& tensor, size_t depth)
+{
+	assert(depth < tensor.GetDepth() && "Depth is out of range.");
+
+	return Tensor2D(tensor.GetRows(), tensor.GetCols(), tensor.GetData() + depth * tensor.GetRows() * tensor.GetCols());
+}
+
+Tensor2D CreateWatcher(Tensor3D& tensor, size_t depth)
+{
+	assert(depth < tensor.GetDepth() && "Depth is out of range.");
+
+	return Tensor2D(tensor.GetRows(), tensor.GetCols(), tensor.GetData() + depth * tensor.GetRows() * tensor.GetCols());
+}
+
+Tensor3D CreateWatcher(Tensor2D& tensor)
+{
+	return Tensor3D(tensor.GetRows(), tensor.GetCols(), 1, tensor.GetData());
+}
+
 Tensor2D Random2D(size_t rows, size_t cols, float min, float max)
 {
 	std::random_device rd;
@@ -16,9 +35,27 @@ Tensor2D Random2D(size_t rows, size_t cols, float min, float max)
 	return res;
 }
 
+Tensor3D Random3D(size_t rows, size_t cols, size_t depth, float min, float max)
+{
+	std::random_device rd;
+	Tensor3D res(rows, cols, depth);
+	res.Map([&](float v) -> float {
+		float r = (float)rd() / (float)rd.max();
+		return min + r * (max - min);
+	});
+	return res;
+}
+
 Tensor2D Map(const Tensor2D& t, std::function<float(float v)> mapper)
 {
 	Tensor2D res = t;
+	res.Map(mapper);
+	return res;
+}
+
+Tensor3D Map(const Tensor3D& t, std::function<float(float v)> mapper)
+{
+	Tensor3D res = t;
 	res.Map(mapper);
 	return res;
 }

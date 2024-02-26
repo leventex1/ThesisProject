@@ -16,6 +16,11 @@ public:
 	Tensor(Tensor&& other) noexcept;
 	virtual ~Tensor();
 
+	// Ownership is not in the tensor. The memory will not be deallocated when destructed.
+	Tensor(float* m_Watching);
+	// Copies a block of memory from pointer.
+	Tensor(const float* data, size_t size);
+
 	inline const float* GetData() const { return m_Data; }
 	inline float* GetData() { return m_Data; }
 	float GetAt(size_t i) const;
@@ -35,8 +40,10 @@ public:
 
 protected:
 	void Alloc(size_t size);
+	void Dealloc();
 
 private:
+	bool m_IsWatcher = false;
 	float* m_Data = nullptr;
 };
 

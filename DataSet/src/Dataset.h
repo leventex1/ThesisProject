@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "Core.h"
+#include "DatasetCore.h"
 
 #include <Mogi.h>
 
@@ -9,8 +9,8 @@ namespace_dataset_start
 
 struct Sample
 {
-	std::vector<Tensor2D> Input;
-	std::vector<Tensor2D> Label;
+	Tensor3D Input;
+	Tensor3D Label;
 };
 
 struct SampleShape
@@ -32,7 +32,7 @@ public:
 	virtual void Next() = 0;
 	virtual void Shuffle() = 0;
 
-	bool CheckModelCompatibility(const Model& model)
+	bool IsModelCompatible(const Model& model)
 	{
 		ModelShape modelShape = model.GetModelShape();
 		SampleShape sampleShape = GetSampleShape();

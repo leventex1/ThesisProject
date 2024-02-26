@@ -56,8 +56,8 @@ SampleShape XORDataset::GetSampleShape() const
 Sample XORDataset::GetSample() const
 {
 	return {
-		{ m_Samples[m_SampleIndex] },
-		{ m_Labels[m_SampleIndex] }
+		Tensor3D(2, 1, 1, m_Samples[m_SampleIndex].GetData()),
+		{ { { m_Labels[m_SampleIndex].GetAt(0, 0) } } }
 	};
 }
 
@@ -76,7 +76,6 @@ void XORDataset::Shuffle()
 		std::swap(m_Samples[i], m_Samples[swapIndex]);
 		std::swap(m_Labels[i], m_Labels[swapIndex]);
 	}
-
 }
 
 namespace_dataset_end

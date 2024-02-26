@@ -56,13 +56,14 @@ struct LIBRARY_API RelU : public ActivationFunciton
 		}
 	}
 
-	void InitActivation(float alpha) { Activation = [alpha](float v) -> float { return v > 0 ? (1.0f + alpha) * v : -alpha * v; }; }
-	void InitDiffActivation(float alpha) { Activation = [alpha](float v) -> float { return v > 0 ? (1.0f + alpha) : -alpha; }; }
+	void InitActivation(float alpha) { Activation = [alpha](float v) -> float { return v > 0 ? (1.0f + alpha) * v : alpha * v; }; }
+	void InitDiffActivation(float alpha) { DiffActivation = [alpha](float v) -> float { return v > 0 ? (1.0f + alpha) : alpha; }; }
 };
 
 static ActivationFunciton GetActivationFunctionByName(const std::string& name, const std::string& params)
 {
 	if (name == "sigmoid") return Sigmoid();
+	if (name == "RelU") return RelU(params);
 
 	assert(false && "Unknown activation function name!");
 	return ActivationFunciton();

@@ -24,8 +24,8 @@ public:
 	void AddLayer(const std::shared_ptr<Layer>& headLayer);
 	void AddLayer(const std::string& layerName, const std::string& layerFromData);
 
-	std::vector<Tensor2D> FeedForward(const std::vector<Tensor2D>& inputs) const;
-	std::vector<Tensor2D> BackPropagation(const std::vector<Tensor2D>& inputs, const CostFunction& costFunction, float learningRate);
+	Tensor3D FeedForward(const Tensor3D& inputs) const;
+	Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate);
 
 	void Save(const std::string& filePath) const;
 	void Load(const std::string& filePath);

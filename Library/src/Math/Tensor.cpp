@@ -9,8 +9,7 @@ Tensor::Tensor() : m_Data(nullptr) { }
 
 Tensor::~Tensor()
 {
-	if(m_Data)
-		delete m_Data;
+	Dealloc();
 }
 
 Tensor::Tensor(size_t size, float value)
@@ -54,6 +53,20 @@ Tensor::Tensor(Tensor&& other) noexcept
 	other.m_Data = nullptr;
 }
 
+Tensor::Tensor(float* m_Watching)
+	: m_IsWatcher(true), m_Data((float*)m_Watching)
+{
+}
+
+Tensor::Tensor(const float* data, size_t size)
+{
+	Alloc(size);
+	for (size_t i = 0; i < size; i++)
+	{
+		m_Data[i] = data[i];
+	}
+}
+
 void Tensor::Map(std::function<float(float v)> mapper)
 {
 	for (size_t i = 0; i < GetSize(); i++)
@@ -95,11 +108,17 @@ std::string Tensor::ToString() const
 
 void Tensor::Alloc(size_t size)
 {
-	if (m_Data)
+	Dealloc();
+	m_Data = new float[size];
+}
+
+void Tensor::Dealloc()
+{
+	if (m_Data && !m_IsWatcher)
 	{
 		delete m_Data;
 	}
-	m_Data = new float[size];
+	m_Data = nullptr;
 }
 
 namespace_end

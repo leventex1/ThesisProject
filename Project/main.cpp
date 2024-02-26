@@ -5,6 +5,7 @@
 #include <MogiDataset.h>
 
 
+
 int main(int argc, char* argv[])
 {
 	for (int i = 0; i < argc; i++)
@@ -12,42 +13,108 @@ int main(int argc, char* argv[])
 		std::cout << argv[i] << std::endl;
 	}
 
-	mogi::dataset::XORDataset dataset;
+
+	mogi::dataset::MNISTDataset trainingDataset("Datasets/MNIST/train-images.idx3-ubyte", "Datasets/MNIST/train-labels.idx1-ubyte");
+	mogi::dataset::MNISTDataset testingDataset("Datasets/MNIST/t10k-images.idx3-ubyte", "Datasets/MNIST/t10k-labels.idx1-ubyte");
 
 	mogi::Model myModel;
-	myModel.AddLayer(std::make_shared<mogi::DenseLayer>(2, 3, mogi::Sigmoid()));
-	myModel.AddLayer(std::make_shared<mogi::DenseLayer>(3, 1, mogi::Sigmoid()));
+	myModel.AddLayer(std::make_shared<mogi::DenseLayer>(784, 20, mogi::Sigmoid()));
+	myModel.AddLayer(std::make_shared<mogi::DenseLayer>(20, 10, mogi::Sigmoid()));
+	myModel.AddLayer(std::make_shared<mogi::DenseLayer>(10, 10, mogi::Sigmoid()));
+	myModel.AddLayer(std::make_shared<mogi::SoftmaxLayer>(10));
 
-	assert(myModel.IsModelCorrect() && "Model definition not correct!");
-	assert(dataset.CheckModelCompatibility(myModel) && "Model is not dataset compatible!");
-
-	for(size_t epoch = 0; epoch < 100000; epoch++)
+	if (myModel.IsModelCorrect())
+		std::cout << "Model is defined correctly." << std::endl;
+	else
 	{
+		std::cout << "Model is not defined correctly." << std::endl;
+		return -1;
+	}
+	//assert(myModel.IsModelCorrect() && "Model definition not correct!");
+	//assert(trainingDataset.IsModelCompatible(myModel) && "Model is not dataset compatible!");
 
-		for (size_t t = 0; t < dataset.GetEpochSize(); t++)
-		{
-			mogi::dataset::Sample trainingSample = dataset.GetSample();
-			dataset.Next();
-
-			mogi::MeanSquareError MSE(trainingSample.Label);
-			myModel.BackPropagation(trainingSample.Input, MSE, 1.0f);
-		}
-
+	{
 		float cost = 0.0f;
-		for (size_t t = 0; t < dataset.GetEpochSize(); t++)
+		float successCount = 0;
+		for (size_t i = 0; i < testingDataset.GetEpochSize(); i++)
 		{
-			mogi::dataset::Sample trainingSample = dataset.GetSample();
-			dataset.Next();
+			mogi::dataset::Sample testingSample = testingDataset.GetSample();
+			testingDataset.Next();
 
-			mogi::MeanSquareError MSE(trainingSample.Label);
-			std::vector<mogi::Tensor2D> output = myModel.FeedForward(trainingSample.Input);
-			cost += MSE.Cost(output);
+			mogi::Tensor3D target = mogi::Tensor3D(10, 1, 1);
+			target.SetAt(testingSample.Label.GetAt(0, 0, 0), 0, 0, 1.0f);
+
+			mogi::Tensor3D output = myModel.FeedForward(testingSample.Input);
+
+			float prediction = 0;
+			int predictionIndex = 0;
+			for (int i = 0; i < output.GetRows(); i++)
+			{
+				if (output.GetAt(i, 0, 0) > prediction)
+				{
+					prediction = output.GetAt(i, 0, 0);
+					predictionIndex = i;
+				}
+			}
+			if (predictionIndex == testingSample.Label.GetAt(0, 0, 0))
+				successCount++;
+
+			mogi::CrossEntropyLoss CEL(target);
+			cost += CEL.Cost(output);
 		}
-		std::cout << "Epoch(" << epoch + 1 << ") cost: " << cost << std::endl;
-
-		dataset.Shuffle();
+		std::cout << "Average cost before training: " << cost / testingDataset.GetEpochSize() << "\t Succes rate: " << successCount / testingDataset.GetEpochSize() << std::endl;
 	}
 
+	std::cout << "Training started..." << std::endl;
+	for (size_t e = 0; e < 10; e++)
+	{
+		for (size_t t = 0; t < trainingDataset.GetEpochSize(); t++)
+		{
+			mogi::dataset::Sample trainingSample = trainingDataset.GetSample();
+			trainingDataset.Next();
+
+			mogi::Tensor3D target = mogi::Tensor3D(10, 1, 1);
+			target.SetAt(trainingSample.Label.GetAt(0, 0, 0), 0, 0, 1.0f);
+
+			mogi::CrossEntropyLoss CEL(target);
+
+			myModel.BackPropagation(trainingSample.Input, CEL, 1.0f);
+		}
+		trainingDataset.Shuffle();
+
+		float cost = 0.0f;
+		float successCount = 0;
+		for (size_t i = 0; i < testingDataset.GetEpochSize(); i++)
+		{
+			mogi::dataset::Sample testingSample = testingDataset.GetSample();
+			testingDataset.Next();
+
+			mogi::Tensor3D target = mogi::Tensor3D(10, 1, 1);
+			target.SetAt(testingSample.Label.GetAt(0, 0, 0), 0, 0, 1.0f);
+
+			mogi::Tensor3D output = myModel.FeedForward(testingSample.Input);
+
+			float prediction = 0;
+			int predictionIndex = 0;
+			for (int i = 0; i < output.GetRows(); i++)
+			{
+				if (output.GetAt(i, 0, 0) > prediction)
+				{
+					prediction = output.GetAt(i, 0, 0);
+					predictionIndex = i;
+				}
+			}
+			if (predictionIndex == testingSample.Label.GetAt(0, 0, 0))
+				successCount++;
+
+			mogi::CrossEntropyLoss CEL(target);
+			cost += CEL.Cost(output);
+		}
+
+		std::cout << "Epoch (" << e+1 << ") \t average cost: " << cost / testingDataset.GetEpochSize() << "\t Succes rate: " << successCount / testingDataset.GetEpochSize() << std::endl;
+	}
+
+	//myModel.Save("testingMNIST.txt");
 
 	return 0;
 }

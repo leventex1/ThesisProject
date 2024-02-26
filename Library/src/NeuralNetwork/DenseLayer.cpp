@@ -20,40 +20,47 @@ DenseLayer::DenseLayer(const std::string& fromString)
 }
 
 
-std::vector<Tensor2D> DenseLayer::FeedForward(const std::vector<Tensor2D>& inputs) const
+Tensor3D DenseLayer::FeedForward(const Tensor3D& inputs) const
 {
-	assert(inputs.size() == 1 && "Dense layer's input is 1 Tensor2D!");
+	assert(inputs.GetDepth() == 1 && "Dense layer's input is 1 Tensor2D!");
 
-	const Tensor2D& input = inputs[0];
+	Tensor2D input = SliceTensor(inputs, 0);
 
 	Tensor2D sum = MatrixMult(m_Weights, input);
 	sum.Add(m_Bias);
 	sum.Map(m_ActivationFunction.Activation);
 
-	return { sum };
+	return Tensor3D(sum.GetRows(), sum.GetCols(), 1, std::move(sum));
 }
 
-std::vector<Tensor2D> DenseLayer::BackPropagation(const std::vector<Tensor2D>& inputs, const CostFunction& costFunction, float learningRate)
+Tensor3D DenseLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate)
 {
-	assert(inputs.size() == 1 && "Dense layer's input is 1 Tensor2D!");
-	assert(inputs[0].GetCols() == 1 && "Dense layer's input should contain 1 column!");
-	assert(inputs[0].GetRows() == m_Weights.GetCols() && "Dense layer's input should contain as many rows as the weight's cols!");
+	//assert(inputs.size() >= 1 && "Got no input!");
+	//assert(inputs.size() >= 1 && "Dense layer's input is 1 Tensor2D!");
+	assert(inputs.GetDepth() == 1 && "Dense layer's input should contain a tensor with a depth of 1!");
+	assert(inputs.GetCols() == 1 && "Dense layer's input should contain 1 column!");
+	assert(inputs.GetRows() == m_Weights.GetCols() && "Dense layer's input should contain as many rows as the weight's cols!");
 
-	const Tensor2D& input = inputs[0];
+	// TODO: implement batch gradient descent.
+
+	LayerShape layerShape = GetLayerShape();
+
+	Tensor2D input = SliceTensor(inputs, 0);
 
 	Tensor2D sum = MatrixMult(m_Weights, input);
 	sum.Add(m_Bias);
-	Tensor2D output = Map(sum, m_ActivationFunction.Activation);
+	Tensor3D output = Tensor3D(layerShape.OutputRows, layerShape.OutputCols, 1, std::move(Map(sum, m_ActivationFunction.Activation)));
 
-	std::vector<Tensor2D> costs =	NextLayer ? 
-									NextLayer->BackPropagation({ output }, costFunction, learningRate) : 
-									costFunction.DiffCost({ output });
+	Tensor3D costs = NextLayer ? 
+								NextLayer->BackPropagation(output, costFunction, learningRate) : 
+								costFunction.DiffCost(output);
 
-	assert(costs.size() == 1 && "Dense layer's cost is 1 Tensor2D");
-	assert(costs[0].GetCols() == 1 && "Dense layer's cost should contain 1 column!");
-	assert(costs[0].GetRows() == m_Weights.GetRows() && "Dense layer's cost should contain as many rows as the weight's rows!");
+	//assert(costs.size() == 1 && "Dense layer's cost is 1 Tensor2D");
+	assert(inputs.GetDepth() == 1 && "Dense layer's cost should contain a tensor with a depth of 1!");
+	assert(costs.GetCols() == 1 && "Dense layer's cost should contain 1 column!");
+	assert(costs.GetRows() == m_Weights.GetRows() && "Dense layer's cost should contain as many rows as the weight's rows!");
 
-	const Tensor2D& cost = costs[0];
+	Tensor2D cost = CreateWatcher(costs, 0);
 	sum.Map(m_ActivationFunction.DiffActivation);
 	Tensor2D diffSum = Mult(cost, sum);
 
@@ -67,7 +74,7 @@ std::vector<Tensor2D> DenseLayer::BackPropagation(const std::vector<Tensor2D>& i
 	m_Weights.Sub(gradWeights);
 	m_Bias.Sub(gradBiases);
 
-	return { gradCosts };
+	return Tensor3D(layerShape.InputRows, layerShape.InputCols, 1, std::move(gradCosts));
 }
 
 LayerShape DenseLayer::GetLayerShape() const

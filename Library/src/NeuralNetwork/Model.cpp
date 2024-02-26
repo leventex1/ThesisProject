@@ -34,12 +34,12 @@ void Model::AddLayer(const std::string& layerName, const std::string& layerFromD
 	assert(false && "Unknown layer name!");
 }
 
-std::vector<Tensor2D> Model::FeedForward(const std::vector<Tensor2D>& inputs) const
+Tensor3D Model::FeedForward(const Tensor3D& inputs) const
 {
 	assert(m_RootLayer != nullptr && "No layer available!");
 
 	std::shared_ptr<Layer> layer = m_RootLayer;
-	std::vector<Tensor2D> output = inputs;
+	Tensor3D output = inputs;
 
 	while (layer)
 	{
@@ -50,7 +50,7 @@ std::vector<Tensor2D> Model::FeedForward(const std::vector<Tensor2D>& inputs) co
 	return output;
 }
 
-std::vector<Tensor2D> Model::BackPropagation(const std::vector<Tensor2D>& inputs, const CostFunction& costFunction, float learningRate)
+Tensor3D Model::BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate)
 {
 	assert(m_RootLayer != nullptr && "No layer available!");
 
@@ -111,6 +111,7 @@ bool Model::IsModelCorrect() const
 			return false;
 
 		layerShape = nextLayerShape;
+		nextLayer = nextLayer->NextLayer;
 	}
 
 	return true;

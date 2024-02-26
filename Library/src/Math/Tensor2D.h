@@ -12,6 +12,11 @@ public:
 	Tensor2D(size_t rows, size_t cols, float value = 0.0f);
 	Tensor2D(const std::initializer_list<std::initializer_list<float>>& initList);
 
+	// Watcher.
+	Tensor2D(size_t rows, size_t cols, float* data);
+	// Copy.
+	Tensor2D(size_t rows, size_t cols, const float* data);
+
 	inline virtual size_t GetSize() const { return m_Rows * m_Cols; }
 	
 	float GetAt(size_t row, size_t col) const;

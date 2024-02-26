@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Core.h">
+    <ClInclude Include="DatasetCore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MogiDataset.h">
@@ -27,9 +27,15 @@
     <ClInclude Include="src\Datasets\XORDataset.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Datasets\MNISTDataset.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Datasets\XORDataset.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Datasets\MNISTDataset.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -137,12 +137,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Core.h" />
+    <ClInclude Include="DatasetCore.h" />
     <ClInclude Include="MogiDataset.h" />
     <ClInclude Include="src\Dataset.h" />
+    <ClInclude Include="src\Datasets\MNISTDataset.h" />
     <ClInclude Include="src\Datasets\XORDataset.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Datasets\MNISTDataset.cpp" />
     <ClCompile Include="src\Datasets\XORDataset.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
