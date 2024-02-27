@@ -6,6 +6,7 @@
 
 #include "src/NeuralNetwork/ActivationF.h"
 #include "src/NeuralNetwork/CostF.h"
+#include "src/NeuralNetwork/Initializer.h"
 #include "src/NeuralNetwork/DenseLayer.h"
 #include "src/NeuralNetwork/SoftmaxLayer.h"
 #include "src/NeuralNetwork/Model.h"

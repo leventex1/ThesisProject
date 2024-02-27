@@ -137,9 +137,11 @@
     <ClInclude Include="src\Math\Tensor.h" />
     <ClInclude Include="src\Math\Tensor2D.h" />
     <ClInclude Include="src\Math\Tensor3D.h" />
+    <ClInclude Include="src\NeuralNetwork\ConvolutionalLayer.h" />
     <ClInclude Include="src\NeuralNetwork\CostF.h" />
     <ClInclude Include="src\NeuralNetwork\DenseLayer.h" />
     <ClInclude Include="src\NeuralNetwork\ActivationF.h" />
+    <ClInclude Include="src\NeuralNetwork\Initializer.h" />
     <ClInclude Include="src\NeuralNetwork\Layer.h" />
     <ClInclude Include="src\NeuralNetwork\Model.h" />
     <ClInclude Include="src\NeuralNetwork\SoftmaxLayer.h" />

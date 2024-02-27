@@ -94,7 +94,7 @@ Sample MNISTDataset::GetSample() const
 {
 	return
 	{
-		Tensor3D(28 * 28, 1, 1, m_Images[m_SampleIndex].GetData()),
+		Tensor3D(28 * 28, 1, 1, (float*)m_Images[m_SampleIndex].GetData()),
 		{ { { (float)m_Labels[m_SampleIndex] } } }
 	};
 }

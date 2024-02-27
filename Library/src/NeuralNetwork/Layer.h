@@ -39,7 +39,7 @@ public:
 
 	virtual std::string GetName() const = 0;
 	virtual std::string ToString() const = 0;
-	virtual std::string ToDebugString() const { assert(false && "Debug string not been implemented!"); return ""; }
+	virtual std::string ToDebugString() const { assert(false && "Debug string not implemented!"); return ""; }
 
 	virtual void FromString(const std::string& data) = 0;
 

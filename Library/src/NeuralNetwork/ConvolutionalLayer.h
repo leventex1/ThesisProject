@@ -6,12 +6,11 @@
 
 namespace_start
 
-class LIBRARY_API DenseLayer : public Layer
+class LIBRARY_API ConvolutionalLayer : public Layer
 {
 public:
-	DenseLayer(size_t inputNodes, size_t outputNodes, ActivationFunciton activationFunction);
-	DenseLayer(size_t inputNodes, size_t outputNodes, ActivationFunciton activationFunction, Initializer initializer);
-	DenseLayer(const std::string& fromString);
+	ConvolutionalLayer();
+	ConvolutionalLayer(const std::string& fromString);
 
 	virtual Tensor3D FeedForward(const Tensor3D& inputs) const;
 	virtual Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate);
@@ -24,10 +23,8 @@ public:
 
 	virtual void FromString(const std::string& data);
 
-	static std::string ClassName() { return "DenseLayer"; }
+	static std::string ClassName() { return "ConvolutionalLayer"; }
 private:
-	Tensor2D m_Weights;
-	Tensor2D m_Bias;
 	ActivationFunciton m_ActivationFunction;
 };
 

@@ -12,11 +12,28 @@ Tensor2D SliceTensor(const Tensor3D& tensor, size_t depth)
 	return Tensor2D(tensor.GetRows(), tensor.GetCols(), tensor.GetData() + depth * tensor.GetRows() * tensor.GetCols());
 }
 
+Tensor2D CreateWatcher(Tensor2D& tensor, size_t row, size_t col, size_t rows, size_t cols, size_t skipRows, size_t skipCols)
+{
+	assert(row + (rows - 1) * (1 + skipRows) < tensor.GetRows() &&
+		col + (cols - 1) * (1 + skipCols) < tensor.GetCols()
+		&& "Out of range tensor params!");
+
+	size_t otherOffsetRows = tensor.GetOffsetRows() != 0 ? tensor.GetOffsetRows() : tensor.GetCols();
+	size_t otherOffsetCols = tensor.GetOffsetCols() != 0 ? tensor.GetOffsetCols() : 1;
+
+	float* offsetData = tensor.GetData() + tensor.CalculateIndex(row, col);
+
+	size_t offsetRows = otherOffsetRows * (1 + skipRows);
+	size_t offsetCols = otherOffsetCols * (1 + skipCols);
+
+	return Tensor2D(rows, cols, offsetRows, offsetCols, offsetData);
+}
+
 Tensor2D CreateWatcher(Tensor3D& tensor, size_t depth)
 {
 	assert(depth < tensor.GetDepth() && "Depth is out of range.");
 
-	return Tensor2D(tensor.GetRows(), tensor.GetCols(), tensor.GetData() + depth * tensor.GetRows() * tensor.GetCols());
+	return Tensor2D(tensor.GetRows(), tensor.GetCols(), 0, 0, tensor.GetData() + depth * tensor.GetRows() * tensor.GetCols());
 }
 
 Tensor3D CreateWatcher(Tensor2D& tensor)
@@ -27,8 +44,7 @@ Tensor3D CreateWatcher(Tensor2D& tensor)
 Tensor2D Random2D(size_t rows, size_t cols, float min, float max)
 {
 	std::random_device rd;
-	Tensor2D res(rows, cols);
-	res.Map([&](float v) -> float {
+	Tensor2D res(rows, cols, [&]() -> float {
 		float r = (float)rd() / (float)rd.max();
 		return min + r * (max - min);
 	});
@@ -49,14 +65,19 @@ Tensor3D Random3D(size_t rows, size_t cols, size_t depth, float min, float max)
 Tensor2D Map(const Tensor2D& t, std::function<float(float v)> mapper)
 {
 	Tensor2D res = t;
-	res.Map(mapper);
+	for (size_t i = 0; i < res.GetRows(); i++)
+		for (size_t j = 0; j < res.GetCols(); j++)
+			res.SetAt(i, j, mapper(res.GetAt(i, j)));
 	return res;
 }
 
 Tensor3D Map(const Tensor3D& t, std::function<float(float v)> mapper)
 {
 	Tensor3D res = t;
-	res.Map(mapper);
+	for (size_t k = 0; k < res.GetDepth(); k++)
+		for (size_t i = 0; i < res.GetRows(); i++)
+			for (size_t j = 0; j < res.GetCols(); j++)
+				res.SetAt(i, j, k, mapper(res.GetAt(i, j, k)));
 	return res;
 }
 
@@ -166,5 +187,64 @@ Tensor2D MatrixMultRightTranspose(const Tensor2D& left, const Tensor2D& right)
 	return res;
 }
 
+size_t CalcConvSize(size_t inputSize, size_t kernelSize, size_t stride, size_t padding)
+{
+	return (inputSize - kernelSize + 2 * padding) / stride + 1;
+}
+
+float KernelOperation(const Tensor2D& window, const Tensor2D& kernel)
+{
+	assert(window.GetRows() == kernel.GetRows() && window.GetCols() == kernel.GetCols() && "Window and kernel params not match!");
+	
+	float res = 0.0f;
+	for (size_t i = 0; i < window.GetSize(); i++)
+	{
+		size_t windowIndex = window.TraverseTo(i);
+		size_t kernelIndex = kernel.TraverseTo(i);
+		res += window.GetData()[windowIndex] * kernel.GetData()[kernelIndex];
+	}
+	return res;
+}
+
+void Convolution(Tensor2D& output, const Tensor2D& input, const Tensor2D& kernel, size_t stride, size_t padding)
+{
+	size_t outputRows = CalcConvSize(input.GetRows(), kernel.GetRows(), stride, padding);
+	size_t outputCols = CalcConvSize(input.GetCols(), kernel.GetCols(), stride, padding);
+
+	assert(output.GetRows() == outputRows && output.GetCols() == outputCols && "Invalid output tensor!");
+
+	for (size_t y = 0; y < outputRows; y++)
+	{
+		for (size_t x = 0; x < outputCols; x++)
+		{
+			float sum = 0.0f;
+			for (size_t ky = 0; ky < kernel.GetRows(); ky++)
+			{
+				for (size_t kx = 0; kx < kernel.GetCols(); kx++)
+				{
+					int posY = y * stride + ky - padding;
+					int posX = x * stride + kx - padding;
+
+					if (posY >= 0 && posY < input.GetRows() && posX >= 0 && posX < input.GetCols()) {
+						sum += input.GetAt(posY, posX) * kernel.GetAt(ky, kx);
+					}
+				}
+			}
+			output.SetAt(y, x, sum);
+		}
+	}
+}
+
+Tensor2D Convolution(const Tensor2D& input, const Tensor2D& kernel, size_t stride, size_t padding)
+{
+	size_t outputRows = CalcConvSize(input.GetRows(), kernel.GetRows(), stride, padding);
+	size_t outputCols = CalcConvSize(input.GetCols(), kernel.GetCols(), stride, padding);
+
+	Tensor2D output(outputRows, outputCols);
+
+	Convolution(output, input, kernel, stride, padding);
+
+	return output;
+}
 
 namespace_end

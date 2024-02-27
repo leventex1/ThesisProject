@@ -14,6 +14,13 @@ DenseLayer::DenseLayer(size_t inputNodes, size_t outpuNodes, ActivationFunciton 
 	m_Bias = Random2D(outpuNodes, 1, -1.0f, 1.0f);
 }
 
+DenseLayer::DenseLayer(size_t inputNodes, size_t outputNodes, ActivationFunciton activationFunction, Initializer initializer)
+	: m_ActivationFunction(activationFunction)
+{
+	m_Weights = Tensor2D(outputNodes, inputNodes, initializer.Init);
+	m_Bias = Tensor2D(outputNodes, 1, initializer.Init);
+}
+
 DenseLayer::DenseLayer(const std::string& fromString)
 {
 	FromString(fromString);

@@ -11,6 +11,11 @@ Tensor3D::Tensor3D(size_t rows, size_t cols, size_t depth, float value)
 {
 }
 
+Tensor3D::Tensor3D(size_t rows, size_t cols, size_t depth, std::function<float()> initializer)
+	: m_Rows(rows), m_Cols(cols), m_Depth(depth), Tensor(rows * cols * depth, initializer)
+{
+}
+
 Tensor3D::Tensor3D(const std::initializer_list<std::initializer_list<std::initializer_list<float>>>& initList)
 	: Tensor()
 {
@@ -34,6 +39,11 @@ Tensor3D::Tensor3D(const std::initializer_list<std::initializer_list<std::initia
 			}
 		}
 	}
+}
+
+Tensor3D::Tensor3D(const Tensor3D& other)
+	: m_Rows(other.m_Rows), m_Cols(other.m_Cols), m_Depth(other.m_Depth), Tensor(other)
+{
 }
 
 Tensor3D::Tensor3D(size_t rows, size_t cols, size_t depth, float* data)
@@ -61,6 +71,11 @@ void Tensor3D::SetAt(size_t row, size_t col, size_t depth, float value)
 {
 	size_t index = row * m_Cols + col + m_Cols * m_Rows * depth;
 	Tensor::SetAt(index, value);
+}
+
+size_t Tensor3D::TraverseTo(size_t s) const
+{
+	return s;
 }
 
 namespace_end

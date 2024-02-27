@@ -22,14 +22,25 @@ Tensor::Tensor(size_t size, float value)
 	}
 }
 
-Tensor::Tensor(const Tensor& other)
+Tensor::Tensor(size_t size, std::function<float()> initializer)
 	: m_Data(nullptr)
+{
+	Alloc(size);
+	for (size_t i = 0; i < size; i++)
+	{
+		m_Data[i] = initializer();
+	}
+}
+
+Tensor::Tensor(const Tensor& other)
+	: m_Data(nullptr), m_IsWatcher(false)
 {
 	size_t size = other.GetSize();
 	Alloc(size);
 	for (size_t i = 0; i < size; i++)
 	{
-		m_Data[i] = other.m_Data[i];
+		size_t otherTrueIndex = other.TraverseTo(i);
+		m_Data[i] = other.m_Data[otherTrueIndex];
 	}
 }
 
@@ -37,17 +48,17 @@ Tensor* Tensor::operator=(const Tensor& other)
 {
 	size_t size = other.GetSize();
 	Alloc(size);
-	m_Data = new float[size];
 	for(size_t i = 0; i < size; i++)
 	{
-		m_Data[i] = other.m_Data[i];
+		size_t otherTrueIndex = other.TraverseTo(i);
+		m_Data[i] = other.m_Data[otherTrueIndex];
 	}
 
 	return this;
 }
 
 Tensor::Tensor(Tensor&& other) noexcept
-	: m_Data(nullptr)
+	: m_Data(nullptr), m_IsWatcher(other.m_IsWatcher)
 {
 	m_Data = other.m_Data;
 	other.m_Data = nullptr;
@@ -71,7 +82,8 @@ void Tensor::Map(std::function<float(float v)> mapper)
 {
 	for (size_t i = 0; i < GetSize(); i++)
 	{
-		m_Data[i] = mapper(m_Data[i]);
+		size_t trueIndex = TraverseTo(i);
+		m_Data[trueIndex] = mapper(m_Data[trueIndex]);
 	}
 }
 
@@ -80,7 +92,9 @@ void Tensor::ElementWise(const Tensor& other, std::function<float(float v1, floa
 	assert(GetSize() == other.GetSize() && "Tensor sizes not match!");
 	for (size_t i = 0; i < GetSize(); i++)
 	{
-		m_Data[i] = operation(m_Data[i], other.m_Data[i]);
+		size_t trueIndex = TraverseTo(i);
+		size_t otherTrueIndex = other.TraverseTo(i);
+		m_Data[trueIndex] = operation(m_Data[trueIndex], other.m_Data[otherTrueIndex]);
 	}
 }
 
@@ -101,7 +115,8 @@ std::string Tensor::ToString() const
 	std::stringstream ss;
 	for(size_t i = 0; i < GetSize(); i++)
 	{
-		ss << (i == 0 ? "" : " ") << m_Data[i];
+		size_t trueIndex = TraverseTo(i);
+		ss << (i == 0 ? "" : " ") << m_Data[trueIndex];
 	}
 	return ss.str();
 }
