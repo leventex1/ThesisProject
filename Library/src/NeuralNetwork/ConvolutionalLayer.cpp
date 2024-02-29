@@ -1,0 +1,211 @@
+#include "ConvolutionalLayer.h"
+#include <assert.h>
+#include <sstream>
+
+
+namespace_start
+
+ConvolutionalLayer::ConvolutionalLayer(
+	size_t inputHeight, size_t inputWidth, size_t inputDepth,
+	size_t kernelHeight, size_t kernelWidth, size_t numKernels,
+	size_t padding, ActivationFunciton activationFunction, Initializer initializer
+) : m_ActivationFunction(activationFunction), m_Padding(padding), m_InputWidth(inputWidth), m_InputHeight(inputHeight), m_InputDepth(inputDepth), m_NumKernels(numKernels)
+{
+	assert(inputHeight == inputWidth && "Different input size ratio not supported!");
+	assert(kernelHeight == kernelWidth && "Different kernel size ratio not supported!");
+
+	size_t kernelDepth = numKernels * inputDepth;
+	size_t outputHeight = CalcConvSize(inputHeight, kernelHeight, 1, padding);
+	size_t outputWidth = CalcConvSize(inputWidth, kernelWidth, 1, padding);
+
+	m_Bias = Tensor3D(outputHeight, outputWidth, numKernels, initializer.Init);
+	m_Kernels = Tensor3D(kernelHeight, kernelWidth, kernelDepth, initializer.Init);
+}
+
+ConvolutionalLayer::ConvolutionalLayer(const std::string& fromString)
+{
+	FromString(fromString);
+}
+
+Tensor3D ConvolutionalLayer::FeedForward(const Tensor3D& inputs)
+{
+	assert(inputs.GetRows() == m_InputHeight && inputs.GetCols() == m_InputWidth && inputs.GetDepth() == m_InputDepth 
+		&& "Invalid input shape!");
+
+	LayerShape layerShape = GetLayerShape();
+
+	Tensor3D output = Tensor3D(layerShape.OutputRows, layerShape.OutputCols, layerShape.OutputDepth);
+
+	for (size_t d = 0; d < layerShape.OutputDepth; d++)
+	{
+		Tensor3D kernelBlock = CreateWatcher(m_Kernels, d * layerShape.InputDepth, layerShape.InputDepth);
+		Tensor2D outputSlice = CreateWatcher(output, d);
+		Convolution(outputSlice, inputs, kernelBlock, 1, m_Padding);
+	}
+
+	output.Add(m_Bias);
+	output.Map(m_ActivationFunction.Activation);
+	return output;
+}
+
+Tensor3D ConvolutionalLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate)
+{
+	assert(inputs.GetRows() == m_InputHeight && inputs.GetCols() == m_InputWidth && inputs.GetDepth() == m_InputDepth
+		&& "Invalid input shape!");
+
+	LayerShape layerShape = GetLayerShape();
+	
+	Tensor3D filterMap = Tensor3D(layerShape.OutputRows, layerShape.OutputCols, layerShape.OutputDepth);
+
+	for (size_t d = 0; d < layerShape.OutputDepth; d++)
+	{
+		Tensor3D kernelBlock = CreateWatcher(m_Kernels, d * layerShape.InputDepth, layerShape.InputDepth);
+		Tensor2D outputSlice = CreateWatcher(filterMap, d);
+		Convolution(outputSlice, inputs, kernelBlock, 1, m_Padding);
+	}
+	filterMap.Add(m_Bias);
+
+	Tensor3D output = Map(filterMap, m_ActivationFunction.Activation);
+
+	Tensor3D costs = NextLayer ?
+								NextLayer->BackPropagation(output, costFunction, learningRate) :
+								costFunction.DiffCost(output);
+
+	assert(costs.GetRows() == layerShape.OutputRows && costs.GetCols() == layerShape.OutputCols && costs.GetDepth() == layerShape.OutputDepth
+		&& "Invalid cost shape!");
+
+	filterMap.Map(m_ActivationFunction.DiffActivation);
+	costs.Mult(filterMap);  // costs -> Gradient.
+
+	Tensor3D& gradBias = costs;
+
+	Tensor3D gradKernel = Tensor3D(m_Kernels.GetRows(), m_Kernels.GetCols(), m_Kernels.GetDepth());
+
+	size_t gradInputPadding = m_Kernels.GetRows() - 1 - m_Padding;
+	Tensor3D gradInput = Tensor3D(layerShape.InputRows, layerShape.InputCols, layerShape.InputDepth);
+
+	for (size_t d = 0; d < layerShape.OutputDepth; d++)
+	{
+		Tensor2D grad = CreateWatcher(costs, d);
+
+		Tensor3D gradKernelBlock = CreateWatcher(gradKernel, d * layerShape.InputDepth, layerShape.InputDepth);
+		Convolution(gradKernelBlock, inputs, grad, 1, m_Padding);
+
+		Tensor3D kernelBlock = CreateWatcher(m_Kernels, d * layerShape.InputDepth, layerShape.InputDepth);
+		ConvolutionKernelFlip(gradInput, grad, kernelBlock, 1, gradInputPadding);
+	}
+
+	gradKernel.Map([learningRate](float v) -> float { return learningRate * v; });
+	gradBias.Map([learningRate](float v) -> float { return learningRate * v; });
+
+	m_Kernels.Sub(gradKernel);
+	m_Bias.Sub(gradBias);
+
+	return gradInput;
+}
+
+LayerShape ConvolutionalLayer::GetLayerShape() const
+{
+	return
+	{
+		m_InputHeight, m_InputWidth, m_InputDepth,
+		m_Bias.GetRows(), m_Bias.GetCols(), m_NumKernels
+	};
+}
+
+std::string ConvolutionalLayer::ToString() const
+{
+	std::stringstream ss;
+
+	ss << "[ " <<
+		m_InputWidth << " " << m_InputHeight << " " << m_InputDepth << " " << 
+		m_Kernels.GetRows() << " " << m_Kernels.GetCols() << " " << m_NumKernels << " " << m_Padding << " " <<
+		m_ActivationFunction.Name << " ( " << m_ActivationFunction.Params << " )" <<
+	" ]";
+
+	for (size_t t = 0; t < m_Kernels.GetSize(); t++)
+	{
+		ss << " " << m_Kernels.GetData()[t];
+	}
+	for (size_t t = 0; t < m_Bias.GetSize(); t++)
+	{
+		ss << " " << m_Bias.GetData()[t];
+	}
+
+	return ss.str();
+}
+
+void ConvolutionalLayer::FromString(const std::string& data)
+{
+	std::size_t numsStartPos = data.find(']');
+	assert(data[0] == '[' && numsStartPos != std::string::npos && "Invalid hyperparameter format.");
+	numsStartPos += 1;
+
+	std::string hyperparams = data.substr(1, numsStartPos - 2);
+	std::size_t acivationParamsStart = hyperparams.find('(');
+	std::size_t acivationParamsEnd = hyperparams.find(')');
+	assert(acivationParamsStart != std::string::npos && acivationParamsEnd != std::string::npos && "Invalid activation function params format.");
+
+	std::stringstream ss(hyperparams);
+	std::string activationFParamsStr = hyperparams.substr(acivationParamsStart + 2, acivationParamsEnd - acivationParamsStart - 3);
+
+	size_t kernelHeight, kernelWidth;
+	std::string activationName;
+
+	try
+	{
+		ss >> m_InputWidth >> m_InputHeight >> m_InputDepth >> kernelHeight >> kernelWidth >> m_NumKernels >> m_Padding;
+		ss >> activationName;
+	}
+	catch (...)
+	{
+		assert(false && "Invalid number.");
+	}
+
+	size_t kernelDepth = m_NumKernels * m_InputDepth;
+	size_t outputHeight = CalcConvSize(m_InputHeight, kernelHeight, 1, m_Padding);
+	size_t outputWidth = CalcConvSize(m_InputWidth, kernelWidth, 1, m_Padding);
+
+	m_Bias = Tensor3D(outputHeight, outputWidth, m_NumKernels);
+	m_Kernels = Tensor3D(kernelHeight, kernelWidth, kernelDepth);
+	m_ActivationFunction = GetActivationFunctionByName(activationName, activationFParamsStr);
+
+	std::istringstream iss(data.substr(numsStartPos));
+
+	for (size_t t = 0; t < m_Kernels.GetSize(); t++)
+	{
+		iss >> m_Kernels.GetData()[t];
+	}
+	for (size_t t = 0; t < m_Bias.GetSize(); t++)
+	{
+		iss >> m_Bias.GetData()[t];
+	}
+}
+
+std::string ConvolutionalLayer::ToDebugString() const
+{
+	std::stringstream ss;
+	ss << "Weights (" << m_Kernels.GetRows() << ", " << m_Kernels.GetCols() << ", " << m_Kernels.GetDepth() << ")\n";
+	ss << m_Kernels.ToString() << "\n";
+	ss << "Bias (" << m_Bias.GetRows() << ", " << m_Bias.GetCols() << ", " << m_Bias.GetDepth() << ")\n";
+	ss << m_Bias.ToString() << "\n";
+	return ss.str();
+}
+
+std::string ConvolutionalLayer::Summarize() const
+{
+	std::stringstream ss;
+
+	LayerShape shape = GetLayerShape();
+
+	ss << ClassName() << ":\t Input: (" <<
+		shape.InputRows << ", " << shape.InputCols << ", " << shape.InputDepth << "), Output: (" <<
+		shape.OutputRows << ", " << shape.OutputCols << ", " << shape.OutputDepth << "), " <<
+		"# kernels: " << m_NumKernels << ", Padding: " << m_Padding <<
+		", Activation: " << m_ActivationFunction.Name << "(" << m_ActivationFunction.Params << "), " <<
+		"# learnable parameters: " << m_Kernels.GetSize() + m_Bias.GetSize();
+
+	return ss.str();
+}
+
+namespace_end

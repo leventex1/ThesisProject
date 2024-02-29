@@ -30,27 +30,19 @@ int main(int argc, char* argv[])
 		std::cout << argv[i] << std::endl;
 	}
 
-	mogi::Tensor2D t1 = {
-		{ 0.0f, 1.0f, 2.0f },
-		{ 4.0f, 5.0f, 6.0f },
-		{ 8.0f, 9.0f, 10.0f },
-	};
 
-	mogi::Tensor2D t2(3, 3, 1.0f);
+	mogi::Model myModel("MNIST_conv_test_02.txt");
+	// myModel.AddLayer(std::make_shared<mogi::ConvolutionalLayer>(28, 28, 1, 3, 3, 3, 1, mogi::RelU(), mogi::He(28 * 28)));
+	// myModel.AddLayer(std::make_shared<mogi::MaxPoolingLayer>(28, 28, 3, 2, 2));
+	// myModel.AddLayer(std::make_shared<mogi::ConvolutionalLayer>(14, 14, 3, 3, 3, 6, 1, mogi::RelU(), mogi::He(14 * 14)));
+	// myModel.AddLayer(std::make_shared<mogi::MaxPoolingLayer>(14, 14, 6, 2, 2));
+	// myModel.AddLayer(std::make_shared<mogi::ConvolutionalLayer>(7, 7, 6, 3, 3, 8, 1, mogi::RelU(), mogi::He(7 * 7)));
+	// myModel.AddLayer(std::make_shared<mogi::FlattenLayer>(7, 7, 8, 392, 1, 1));
+	// myModel.AddLayer(std::make_shared<mogi::DenseLayer>(392, 10, mogi::RelU(), mogi::He(392)));
+	// myModel.AddLayer(std::make_shared<mogi::SoftmaxLayer>(10));
 
-	mogi::Tensor2D t3 = mogi::Convolution(t1, t2, 1, 1);
 
-	std::cout << "t3: " << t3.ToString() << std::endl;
-
-	return 0;
-
-	mogi::dataset::MNISTDataset trainingDataset("Datasets/MNIST/train-images.idx3-ubyte", "Datasets/MNIST/train-labels.idx1-ubyte");
-	mogi::dataset::MNISTDataset testingDataset("Datasets/MNIST/t10k-images.idx3-ubyte", "Datasets/MNIST/t10k-labels.idx1-ubyte");
-
-	mogi::Model myModel;
-	myModel.AddLayer(std::make_shared<mogi::DenseLayer>(784, 10, mogi::RelU(0.01), mogi::He(784) ));
-	myModel.AddLayer(std::make_shared<mogi::DenseLayer>(10, 10, mogi::RelU(0.01), mogi::He(10) ));
-	myModel.AddLayer(std::make_shared<mogi::SoftmaxLayer>(10));
+	myModel.Summarize();
 
 	if (myModel.IsModelCorrect())
 		std::cout << "Model is defined correctly." << std::endl;
@@ -59,8 +51,10 @@ int main(int argc, char* argv[])
 		std::cout << "Model is not defined correctly." << std::endl;
 		return -1;
 	}
-	//assert(myModel.IsModelCorrect() && "Model definition not correct!");
-	//assert(trainingDataset.IsModelCompatible(myModel) && "Model is not dataset compatible!");
+
+
+	mogi::dataset::MNISTDataset trainingDataset("Datasets/MNIST/train-images.idx3-ubyte", "Datasets/MNIST/train-labels.idx1-ubyte");
+	mogi::dataset::MNISTDataset testingDataset("Datasets/MNIST/t10k-images.idx3-ubyte", "Datasets/MNIST/t10k-labels.idx1-ubyte");
 
 	{
 		float cost = 0.0f;
@@ -70,25 +64,15 @@ int main(int argc, char* argv[])
 			mogi::dataset::Sample testingSample = testingDataset.GetSample();
 			testingDataset.Next();
 
-			mogi::Tensor3D target = mogi::Tensor3D(10, 1, 1);
-			target.SetAt(testingSample.Label.GetAt(0, 0, 0), 0, 0, 1.0f);
-
 			mogi::Tensor3D output = myModel.FeedForward(testingSample.Input);
 
-			float prediction = 0;
-			int predictionIndex = 0;
-			for (int i = 0; i < output.GetRows(); i++)
-			{
-				if (output.GetAt(i, 0, 0) > prediction)
-				{
-					prediction = output.GetAt(i, 0, 0);
-					predictionIndex = i;
-				}
-			}
-			if (predictionIndex == testingSample.Label.GetAt(0, 0, 0))
+			auto outputMaxPos = mogi::MaxPos(mogi::CreateWatcher(output, 0));
+			auto labelMaxPos = mogi::MaxPos(mogi::CreateWatcher(testingSample.Label, 0));
+			
+			if (outputMaxPos.first == labelMaxPos.first)
 				successCount++;
 
-			mogi::CrossEntropyLoss CEL(target);
+			mogi::CrossEntropyLoss CEL(testingSample.Label);
 			cost += CEL.Cost(output);
 		}
 		std::cout << "Average cost before training: " << cost / testingDataset.GetEpochSize() << "\t Succes rate: " << successCount / testingDataset.GetEpochSize() << std::endl;
@@ -105,11 +89,7 @@ int main(int argc, char* argv[])
 				mogi::dataset::Sample trainingSample = trainingDataset.GetSample();
 				trainingDataset.Next();
 
-				mogi::Tensor3D target = mogi::Tensor3D(10, 1, 1);
-				target.SetAt(trainingSample.Label.GetAt(0, 0, 0), 0, 0, 1.0f);
-
-				mogi::CrossEntropyLoss CEL(target);
-
+				mogi::CrossEntropyLoss CEL(trainingSample.Label);
 				myModel.BackPropagation(trainingSample.Input, CEL, 0.001f);
 			}
 		}
@@ -123,32 +103,22 @@ int main(int argc, char* argv[])
 			mogi::dataset::Sample testingSample = testingDataset.GetSample();
 			testingDataset.Next();
 
-			mogi::Tensor3D target = mogi::Tensor3D(10, 1, 1);
-			target.SetAt(testingSample.Label.GetAt(0, 0, 0), 0, 0, 1.0f);
-
 			mogi::Tensor3D output = myModel.FeedForward(testingSample.Input);
 
-			float prediction = 0;
-			int predictionIndex = 0;
-			for (int i = 0; i < output.GetRows(); i++)
-			{
-				if (output.GetAt(i, 0, 0) > prediction)
-				{
-					prediction = output.GetAt(i, 0, 0);
-					predictionIndex = i;
-				}
-			}
-			if (predictionIndex == testingSample.Label.GetAt(0, 0, 0))
+			auto outputMaxPos = mogi::MaxPos(mogi::CreateWatcher(output, 0));
+			auto labelMaxPos = mogi::MaxPos(mogi::CreateWatcher(testingSample.Label, 0));
+
+			if (outputMaxPos.first == labelMaxPos.first)
 				successCount++;
 
-			mogi::CrossEntropyLoss CEL(target);
+			mogi::CrossEntropyLoss CEL(testingSample.Label);
 			cost += CEL.Cost(output);
 		}
 
 		std::cout << "Epoch (" << e+1 << ") \t average cost: " << cost / testingDataset.GetEpochSize() << "\t Succes rate: " << successCount / testingDataset.GetEpochSize() << std::endl;
 	}
 
-	//myModel.Save("MNIST_model_01.txt");
+	myModel.Save("MNIST_conv_test_01.txt");
 
 	return 0;
 }

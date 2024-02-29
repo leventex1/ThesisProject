@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /Project/Datasets/archive
 /Project/Datasets/MNIST
+/Trainer/Datasets

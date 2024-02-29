@@ -100,13 +100,13 @@ void Tensor::ElementWise(const Tensor& other, std::function<float(float v1, floa
 
 float Tensor::GetAt(size_t i) const
 {
-	assert(i < GetSize() && "Out of index error!");
+	assert((i < GetSize() || m_IsWatcher) && "Out of index error!");
 	return m_Data[i];
 }
 
 void Tensor::SetAt(size_t i, float value)
 {
-	assert(i < GetSize() && "Out of index error!");
+	assert((i < GetSize() || m_IsWatcher) && "Out of index error!");
 	m_Data[i] = value;
 }
 

@@ -43,13 +43,12 @@ size_t MNISTDataset::LoadImages(const std::string& filePath)
 	{
 		unsigned char data[28 * 28];
 		file.read((char*)data, 28 * 28);
-		m_Images.push_back(Tensor2D(28 * 28, 1));
+		m_Images.push_back(Tensor2D(28, 28));
 		for (size_t i = 0; i < 28; i++)
 		{
 			for (size_t j = 0; j < 28; j++)
 			{
-				Tensor* tensor = &m_Images[t];
-				tensor->SetAt(i * 28 + j, (float)data[i * 28 + j] / 255);
+				m_Images[t].SetAt(i, j, (float)data[i * 28 + j] / 255);
 			}
 		}
 	}
@@ -85,17 +84,20 @@ SampleShape MNISTDataset::GetSampleShape() const
 {
 	return
 	{
-		28 * 28, 1, 1,
-		1, 1, 1
+		28, 28, 1,
+		10, 1, 1
 	};
 }
 
 Sample MNISTDataset::GetSample() const
 {
+	Tensor3D label = Tensor3D(10, 1, 1);
+	label.SetAt(m_Labels[m_SampleIndex], 0, 0, 1.0f);
+
 	return
 	{
-		Tensor3D(28 * 28, 1, 1, (float*)m_Images[m_SampleIndex].GetData()),
-		{ { { (float)m_Labels[m_SampleIndex] } } }
+		Tensor3D(28, 28, 1, (float*)m_Images[m_SampleIndex].GetData()),
+		label
 	};
 }
 
@@ -122,13 +124,14 @@ void MNISTDataset::Display() const
 
 	Sample sample = GetSample();
 
-	std::cout << "Label: " << sample.Label.GetAt(0, 0, 0) << std::endl;
+	auto pos = MaxPos(CreateWatcher(sample.Label, 0));
+
+	std::cout << "Label: " << pos.first << std::endl;
 	for (size_t i = 0; i < 28; i++)
 	{
 		for (size_t j = 0; j < 28; j++)
 		{
-			mogi::Tensor* input = &sample.Input;
-			float value = input->GetAt(i * 28 + j);
+			float value = sample.Input.GetAt(i, j, 0);
  			char c = charSequence.at((int)(value * (charSequence.size() - 1)));
 			std::cout << c << " ";
 		}

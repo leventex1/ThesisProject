@@ -12,7 +12,7 @@ SoftmaxLayer::SoftmaxLayer(const std::string& fromString)
 	FromString(fromString);
 }
 
-Tensor3D SoftmaxLayer::FeedForward(const Tensor3D& inputs) const
+Tensor3D SoftmaxLayer::FeedForward(const Tensor3D& inputs)
 {
 	assert(inputs.GetRows() == m_InputNodes && 
 			inputs.GetCols() == 1 &&
@@ -93,6 +93,16 @@ std::string SoftmaxLayer::ToString() const
 std::string SoftmaxLayer::ToDebugString() const
 {
 	return "Soft max layer, input nodes: " + std::to_string(m_InputNodes);
+}
+
+std::string SoftmaxLayer::Summarize() const
+{
+	std::stringstream ss;
+
+	ss << ClassName() << ":\t # input nodes: " << m_InputNodes <<
+	", # learnable parameters : " << 0;
+
+	return ss.str();
 }
 
 void SoftmaxLayer::FromString(const std::string& data)

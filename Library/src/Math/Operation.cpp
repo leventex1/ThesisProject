@@ -1,6 +1,7 @@
 #include "Operation.h"
 #include <assert.h>
 #include <random>
+#include <limits>
 
 
 namespace_start
@@ -39,6 +40,13 @@ Tensor2D CreateWatcher(Tensor3D& tensor, size_t depth)
 Tensor3D CreateWatcher(Tensor2D& tensor)
 {
 	return Tensor3D(tensor.GetRows(), tensor.GetCols(), 1, tensor.GetData());
+}
+
+Tensor3D CreateWatcher(Tensor3D& tensor, size_t fromDepth, size_t depth)
+{
+	assert(fromDepth + depth <= tensor.GetDepth() && "Depth is out of range.");
+
+	return Tensor3D(tensor.GetRows(), tensor.GetCols(), depth, tensor.GetData() + fromDepth * tensor.GetRows() * tensor.GetCols());
 }
 
 Tensor2D Random2D(size_t rows, size_t cols, float min, float max)
@@ -106,6 +114,28 @@ Tensor2D Div(const Tensor2D& t1, const Tensor2D& t2)
 {
 	Tensor2D res = t1;
 	res.Div(t2);
+	return res;
+}
+
+std::pair<size_t, size_t> MaxPos(const Tensor2D& tensor)
+{
+	assert(tensor.GetSize() > 1 && "No value in tensor!");
+
+	std::pair<size_t, size_t> res = { 0, 0 };
+	float min = tensor.GetAt(0, 0);
+
+	for (size_t i = 0; i < tensor.GetRows(); i++)
+	{
+		for (size_t j = 0; j < tensor.GetCols(); j++)
+		{
+			if (tensor.GetAt(i, j) > min)
+			{
+				min = tensor.GetAt(i, j);
+				res = { i, j };
+			}
+		}
+	}
+
 	return res;
 }
 
@@ -230,10 +260,224 @@ void Convolution(Tensor2D& output, const Tensor2D& input, const Tensor2D& kernel
 					}
 				}
 			}
-			output.SetAt(y, x, sum);
+			output.SetAt(y, x, output.GetAt(y, x) + sum);
 		}
 	}
 }
+
+void ConvolutionKernelFlip(Tensor2D& output, const Tensor2D& input, const Tensor2D& kernel, size_t stride, size_t padding)
+{
+	size_t outputRows = CalcConvSize(input.GetRows(), kernel.GetRows(), stride, padding);
+	size_t outputCols = CalcConvSize(input.GetCols(), kernel.GetCols(), stride, padding);
+
+	assert(output.GetRows() == outputRows && output.GetCols() == outputCols && "Invalid output tensor!");
+
+	for (size_t y = 0; y < outputRows; y++)
+	{
+		for (size_t x = 0; x < outputCols; x++)
+		{
+			float sum = 0.0f;
+			for (size_t ky = 0; ky < kernel.GetRows(); ky++)
+			{
+				for (size_t kx = 0; kx < kernel.GetCols(); kx++)
+				{
+					int posY = y * stride + ky - padding;
+					int posX = x * stride + kx - padding;
+
+					size_t flippedKy = kernel.GetRows() - 1 - ky;
+					size_t flippedKx = kernel.GetCols() - 1 - kx;
+
+					if (posY >= 0 && posY < input.GetRows() && posX >= 0 && posX < input.GetCols()) {
+						sum += input.GetAt(posY, posX) * kernel.GetAt(flippedKy, flippedKx);
+					}
+				}
+			}
+			output.SetAt(y, x, output.GetAt(y, x) + sum);
+		}
+	}
+}
+
+void Convolution(Tensor2D& output, const Tensor3D& input, const Tensor3D& kernel, size_t stride, size_t padding)
+{
+	size_t outputRows = CalcConvSize(input.GetRows(), kernel.GetRows(), stride, padding);
+	size_t outputCols = CalcConvSize(input.GetCols(), kernel.GetCols(), stride, padding);
+
+	assert(input.GetDepth() == kernel.GetDepth() && "Input and kernel depth not match!");
+	assert(output.GetRows() == outputRows && output.GetCols() == outputCols && "Invalid output tensor!");
+
+	for (size_t y = 0; y < outputRows; y++)
+	{
+		for (size_t x = 0; x < outputCols; x++)
+		{
+			float sum = 0.0f;
+			for (size_t ky = 0; ky < kernel.GetRows(); ky++)
+			{
+				for (size_t kx = 0; kx < kernel.GetCols(); kx++)
+				{
+					for (size_t d = 0; d < kernel.GetDepth(); d++)
+					{
+						int posY = y * stride + ky - padding;
+						int posX = x * stride + kx - padding;
+
+						if (posY >= 0 && posY < input.GetRows() && posX >= 0 && posX < input.GetCols()) {
+							sum += input.GetAt(posY, posX, d) * kernel.GetAt(ky, kx, d);
+						}
+					}
+
+				}
+			}
+			output.SetAt(y, x, output.GetAt(y, x) + sum);
+		}
+	}
+}
+
+void ConvolutionKernelFlip(Tensor2D& output, const Tensor3D& input, const Tensor3D& kernel, size_t stride, size_t padding)
+{
+	size_t outputRows = CalcConvSize(input.GetRows(), kernel.GetRows(), stride, padding);
+	size_t outputCols = CalcConvSize(input.GetCols(), kernel.GetCols(), stride, padding);
+
+	assert(input.GetDepth() == kernel.GetDepth() && "Input and kernel depth not match!");
+	assert(output.GetRows() == outputRows && output.GetCols() == outputCols && "Invalid output tensor!");
+
+	for (size_t y = 0; y < outputRows; y++)
+	{
+		for (size_t x = 0; x < outputCols; x++)
+		{
+			float sum = 0.0f;
+			for (size_t ky = 0; ky < kernel.GetRows(); ky++)
+			{
+				for (size_t kx = 0; kx < kernel.GetCols(); kx++)
+				{
+					for (size_t d = 0; d < kernel.GetDepth(); d++)
+					{
+						int posY = y * stride + ky - padding;
+						int posX = x * stride + kx - padding;
+
+						size_t flippedKy = kernel.GetRows() - 1 - ky;
+						size_t flippedKx = kernel.GetCols() - 1 - kx;
+
+						if (posY >= 0 && posY < input.GetRows() && posX >= 0 && posX < input.GetCols()) {
+							sum += input.GetAt(posY, posX, d) * kernel.GetAt(flippedKy, flippedKx, d);
+						}
+					}
+
+				}
+			}
+			output.SetAt(y, x, output.GetAt(y, x) + sum);
+		}
+	}
+}
+
+void Convolution(Tensor3D& output, const Tensor3D& input, const Tensor2D& kernel, size_t stride, size_t padding)
+{
+	size_t outputRows = CalcConvSize(input.GetRows(), kernel.GetRows(), stride, padding);
+	size_t outputCols = CalcConvSize(input.GetCols(), kernel.GetCols(), stride, padding);
+
+	assert(output.GetRows() == outputRows && output.GetCols() == outputCols && "Invalid output tensor size!");
+	assert(output.GetDepth() == input.GetDepth() && "Invalid output tensor depth!");
+
+
+	for (size_t d = 0; d < output.GetDepth(); d++)
+	{
+		for (size_t y = 0; y < outputRows; y++)
+		{
+			for (size_t x = 0; x < outputCols; x++)
+			{
+				float sum = 0.0f;
+				for (size_t ky = 0; ky < kernel.GetRows(); ky++)
+				{
+					for (size_t kx = 0; kx < kernel.GetCols(); kx++)
+					{
+						int posY = y * stride + ky - padding;
+						int posX = x * stride + kx - padding;
+
+						if (posY >= 0 && posY < input.GetRows() && posX >= 0 && posX < input.GetCols()) {
+							sum += input.GetAt(posY, posX, d) * kernel.GetAt(ky, kx);
+						}
+
+					}
+				}
+				output.SetAt(y, x, d, output.GetAt(y, x, d) + sum);
+			}
+		}
+	}
+}
+
+void ConvolutionKernelFlip(Tensor3D& output, const Tensor3D& input, const Tensor2D& kernel, size_t stride, size_t padding)
+{
+	size_t outputRows = CalcConvSize(input.GetRows(), kernel.GetRows(), stride, padding);
+	size_t outputCols = CalcConvSize(input.GetCols(), kernel.GetCols(), stride, padding);
+
+	assert(output.GetRows() == outputRows && output.GetCols() == outputCols && "Invalid output tensor size!");
+	assert(output.GetDepth() == input.GetDepth() && "Invalid output tensor depth!");
+
+
+	for (size_t d = 0; d < output.GetDepth(); d++)
+	{
+		for (size_t y = 0; y < outputRows; y++)
+		{
+			for (size_t x = 0; x < outputCols; x++)
+			{
+				float sum = 0.0f;
+				for (size_t ky = 0; ky < kernel.GetRows(); ky++)
+				{
+					for (size_t kx = 0; kx < kernel.GetCols(); kx++)
+					{
+						int posY = y * stride + ky - padding;
+						int posX = x * stride + kx - padding;
+
+						size_t flippedKy = kernel.GetRows() - 1 - ky;
+						size_t flippedKx = kernel.GetCols() - 1 - kx;
+
+						if (posY >= 0 && posY < input.GetRows() && posX >= 0 && posX < input.GetCols()) {
+							sum += input.GetAt(posY, posX, d) * kernel.GetAt(flippedKy, flippedKx);
+						}
+
+					}
+				}
+				output.SetAt(y, x, d, output.GetAt(y, x, d) + sum);
+			}
+		}
+	}
+}
+
+void ConvolutionKernelFlip(Tensor3D& output, const Tensor2D& input, const Tensor3D& kernel, size_t stride, size_t padding)
+{
+	size_t outputRows = CalcConvSize(input.GetRows(), kernel.GetRows(), stride, padding);
+	size_t outputCols = CalcConvSize(input.GetCols(), kernel.GetCols(), stride, padding);
+
+	assert(output.GetRows() == outputRows && output.GetCols() == outputCols && "Invalid output tensor size!");
+	assert(output.GetDepth() == kernel.GetDepth() && "Invalid output tensor depth!");
+
+	for (size_t d = 0; d < output.GetDepth(); d++)
+	{
+		for (size_t y = 0; y < outputRows; y++)
+		{
+			for (size_t x = 0; x < outputCols; x++)
+			{
+				float sum = 0.0f;
+				for (size_t ky = 0; ky < kernel.GetRows(); ky++)
+				{
+					for (size_t kx = 0; kx < kernel.GetCols(); kx++)
+					{
+						int posY = y * stride + ky - padding;
+						int posX = x * stride + kx - padding;
+
+						size_t flippedKy = kernel.GetRows() - 1 - ky;
+						size_t flippedKx = kernel.GetCols() - 1 - kx;
+
+						if (posY >= 0 && posY < input.GetRows() && posX >= 0 && posX < input.GetCols()) {
+							sum += input.GetAt(posY, posX) * kernel.GetAt(flippedKy, flippedKx, d);
+						}
+
+					}
+				}
+				output.SetAt(y, x, d, output.GetAt(y, x, d) + sum);
+			}
+		}
+	}
+}
+
 
 Tensor2D Convolution(const Tensor2D& input, const Tensor2D& kernel, size_t stride, size_t padding)
 {
@@ -243,6 +487,42 @@ Tensor2D Convolution(const Tensor2D& input, const Tensor2D& kernel, size_t strid
 	Tensor2D output(outputRows, outputCols);
 
 	Convolution(output, input, kernel, stride, padding);
+
+	return output;
+}
+
+Tensor2D ConvolutionKernelFlip(const Tensor2D& input, const Tensor2D& kernel, size_t stride, size_t padding)
+{
+	size_t outputRows = CalcConvSize(input.GetRows(), kernel.GetRows(), stride, padding);
+	size_t outputCols = CalcConvSize(input.GetCols(), kernel.GetCols(), stride, padding);
+
+	Tensor2D output(outputRows, outputCols);
+
+	ConvolutionKernelFlip(output, input, kernel, stride, padding);
+
+	return output;
+}
+
+Tensor2D Convolution(const Tensor3D& input, const Tensor3D& kernel, size_t stride, size_t padding)
+{
+	size_t outputRows = CalcConvSize(input.GetRows(), kernel.GetRows(), stride, padding);
+	size_t outputCols = CalcConvSize(input.GetCols(), kernel.GetCols(), stride, padding);
+
+	Tensor2D output(outputRows, outputCols);
+
+	Convolution(output, input, kernel, stride, padding);
+
+	return output;
+}
+
+Tensor2D ConvolutionKernelFlip(const Tensor3D& input, const Tensor3D& kernel, size_t stride, size_t padding)
+{
+	size_t outputRows = CalcConvSize(input.GetRows(), kernel.GetRows(), stride, padding);
+	size_t outputCols = CalcConvSize(input.GetCols(), kernel.GetCols(), stride, padding);
+
+	Tensor2D output(outputRows, outputCols);
+
+	ConvolutionKernelFlip(output, input, kernel, stride, padding);
 
 	return output;
 }

@@ -21,7 +21,7 @@ class LIBRARY_API Layer
 public:
 	virtual ~Layer() { }
 
-	virtual Tensor3D FeedForward(const Tensor3D& inputs) const = 0;
+	virtual Tensor3D FeedForward(const Tensor3D& inputs) = 0;
 
 	/*
 		Recursive backpropagation learning algorithm.
@@ -40,6 +40,7 @@ public:
 	virtual std::string GetName() const = 0;
 	virtual std::string ToString() const = 0;
 	virtual std::string ToDebugString() const { assert(false && "Debug string not implemented!"); return ""; }
+	virtual std::string Summarize() const { assert(false && "Summarize not implemented!"); return "Unknown layer"; }
 
 	virtual void FromString(const std::string& data) = 0;
 

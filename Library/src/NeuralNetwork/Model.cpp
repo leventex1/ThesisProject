@@ -5,6 +5,10 @@
 
 #include "Model.h"
 #include "DenseLayer.h"
+#include "ConvolutionalLayer.h"
+#include "SoftmaxLayer.h"
+#include "FlattenLayer.h"
+#include "MaxPoolingLayer.h"
 
 
 namespace_start
@@ -29,7 +33,11 @@ void Model::AddLayer(const std::shared_ptr<Layer>& headLayer)
 
 void Model::AddLayer(const std::string& layerName, const std::string& layerFromData)
 {
-	if (layerName == DenseLayer::ClassName()) AddLayer(std::make_shared<DenseLayer>(layerFromData)); return;
+	if (layerName == DenseLayer::ClassName()) { AddLayer(std::make_shared<DenseLayer>(layerFromData)); return; }
+	if (layerName == ConvolutionalLayer::ClassName()) { AddLayer(std::make_shared<ConvolutionalLayer>(layerFromData)); return; }
+	if (layerName == SoftmaxLayer::ClassName()) { AddLayer(std::make_shared<SoftmaxLayer>(layerFromData)); return; }
+	if (layerName == FlattenLayer::ClassName()) { AddLayer(std::make_shared<FlattenLayer>(layerFromData)); return; }
+	if (layerName == MaxPoolingLayer::ClassName()) { AddLayer(std::make_shared<MaxPoolingLayer>(layerFromData)); return; }
 
 	assert(false && "Unknown layer name!");
 }
@@ -129,6 +137,19 @@ ModelShape Model::GetModelShape() const
 		rootShape.InputRows, rootShape.InputCols, rootShape.InputDepth,
 		headShape.OutputRows, headShape.OutputCols, headShape.OutputDepth
 	};
+}
+
+void Model::Summarize() const
+{
+	assert(m_RootLayer != nullptr && "No layer available!");
+
+	std::shared_ptr<Layer> layer = m_RootLayer;
+
+	while (layer)
+	{
+		std::cout << layer->Summarize() << std::endl;
+		layer = layer->NextLayer;
+	}
 }
 
 namespace_end

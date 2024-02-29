@@ -27,7 +27,7 @@ DenseLayer::DenseLayer(const std::string& fromString)
 }
 
 
-Tensor3D DenseLayer::FeedForward(const Tensor3D& inputs) const
+Tensor3D DenseLayer::FeedForward(const Tensor3D& inputs)
 {
 	assert(inputs.GetDepth() == 1 && "Dense layer's input is 1 Tensor2D!");
 
@@ -170,6 +170,21 @@ std::string DenseLayer::ToDebugString() const
 	ss << m_Weights.ToString() << "\n";
 	ss << "Bias (" << m_Bias.GetRows() << ", " << m_Bias.GetCols() << ")\n";
 	ss << m_Bias.ToString() << "\n";
+	return ss.str();
+}
+
+std::string DenseLayer::Summarize() const
+{
+	std::stringstream ss;
+
+	LayerShape shape = GetLayerShape();
+
+	ss << ClassName() << ":\t Input: (" <<
+	shape.InputRows << ", " << shape.InputCols << ", " << shape.InputDepth << "), Output: (" <<
+	shape.OutputRows << ", " << shape.OutputCols << ", " << shape.OutputDepth << "), " <<
+	"Activation: " << m_ActivationFunction.Name << "(" << m_ActivationFunction.Params << "), " <<
+	"# learnable parameters: " << m_Weights.GetSize() + m_Bias.GetSize();
+
 	return ss.str();
 }
 

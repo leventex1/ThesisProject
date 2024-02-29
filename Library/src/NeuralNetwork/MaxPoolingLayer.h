@@ -1,15 +1,18 @@
 #pragma once
 #include "Layer.h"
 #include "ActivationF.h"
+#include "Initializer.h"
 
 
 namespace_start
 
-class LIBRARY_API SoftmaxLayer : public Layer
+class LIBRARY_API MaxPoolingLayer : public Layer
 {
 public:
-	SoftmaxLayer(size_t inputNodes);
-	SoftmaxLayer(const std::string& fromString);
+	MaxPoolingLayer(
+		size_t inputHeight, size_t inputWidth, size_t inputDepth,
+		size_t poolingHeight, size_t poolingWidth);
+	MaxPoolingLayer(const std::string& fromString);
 
 	virtual Tensor3D FeedForward(const Tensor3D& inputs);
 	virtual Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate);
@@ -23,9 +26,10 @@ public:
 
 	virtual void FromString(const std::string& data);
 
-	static std::string ClassName() { return "SoftmaxLayer"; }
+	static std::string ClassName() { return "MaxPoolingLayer"; }
 private:
-	size_t m_InputNodes;
+	size_t m_InputHeight, m_InputWidth, m_InputDepth;
+	size_t m_PoolingHeight, m_PoolingWidth;
 };
 
 namespace_end

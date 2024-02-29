@@ -13,7 +13,7 @@ public:
 	DenseLayer(size_t inputNodes, size_t outputNodes, ActivationFunciton activationFunction, Initializer initializer);
 	DenseLayer(const std::string& fromString);
 
-	virtual Tensor3D FeedForward(const Tensor3D& inputs) const;
+	virtual Tensor3D FeedForward(const Tensor3D& inputs);
 	virtual Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate);
 
 	virtual LayerShape GetLayerShape() const;
@@ -21,6 +21,7 @@ public:
 	virtual std::string GetName() const { return ClassName(); }
 	virtual std::string ToString() const;
 	virtual std::string ToDebugString() const;
+	virtual std::string Summarize() const;
 
 	virtual void FromString(const std::string& data);
 

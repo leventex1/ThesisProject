@@ -28,12 +28,15 @@ Tensor3D::Tensor3D(const std::initializer_list<std::initializer_list<std::initia
 	size_t index = 0;
 	for (auto d = initList.begin(); d != initList.end(); d++)
 	{
-		assert(d->size() == m_Depth && "Tensor3D missmatched params numbers!");
+		assert(d->size() == m_Rows && "Tensor3D missmatched params rows!");
 
 		for (auto i = d->begin(); i != d->end(); i++)
 		{
+			assert(i->size() == m_Cols && "Tensor3D missmatched params cols!");
+
 			for (auto j = i->begin(); j != i->end(); j++)
 			{
+
 				Tensor::SetAt(index, (*j));
 				index++;
 			}

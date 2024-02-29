@@ -8,5 +8,8 @@
 #include "src/NeuralNetwork/CostF.h"
 #include "src/NeuralNetwork/Initializer.h"
 #include "src/NeuralNetwork/DenseLayer.h"
+#include "src/NeuralNetwork/ConvolutionalLayer.h"
+#include "src/NeuralNetwork/FlattenLayer.h"
+#include "src/NeuralNetwork/MaxPoolingLayer.h"
 #include "src/NeuralNetwork/SoftmaxLayer.h"
 #include "src/NeuralNetwork/Model.h"

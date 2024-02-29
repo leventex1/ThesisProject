@@ -32,7 +32,9 @@ public:
 
 	bool IsModelCorrect() const;
 	ModelShape GetModelShape() const;
+	void Summarize() const;
 
+	inline const std::shared_ptr<Layer>& GetRootLayer() const { return m_RootLayer; }
 private:
 	std::shared_ptr<Layer> m_RootLayer = nullptr;
 	std::shared_ptr<Layer> m_HeadLayer = nullptr;
