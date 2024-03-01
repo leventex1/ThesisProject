@@ -1,11 +1,11 @@
-#include "FlattenLayer.h"
+#include "ReshapeLayer.h"
 #include <assert.h>
 #include <sstream>
 
 
 namespace_start
 
-FlattenLayer::FlattenLayer(
+ReshapeLayer::ReshapeLayer(
 	size_t inputHeight, size_t inputWidth, size_t inputDepth, 
 	size_t outputHeight, size_t outputWidth, size_t outputDepth
 ) : m_InputHeight(inputHeight), m_InputWidth(inputWidth), m_InputDepth(inputDepth),
@@ -15,12 +15,12 @@ FlattenLayer::FlattenLayer(
 		&& "Number of input units has to be the same as the number of output unit!");
 }
 
-FlattenLayer::FlattenLayer(const std::string& fromString)
+ReshapeLayer::ReshapeLayer(const std::string& fromString)
 {
 	FromString(fromString);
 }
 
-Tensor3D FlattenLayer::FeedForward(const Tensor3D& inputs)
+Tensor3D ReshapeLayer::FeedForward(const Tensor3D& inputs)
 {
 	assert(m_InputHeight == inputs.GetRows() && 
 			m_InputWidth == inputs.GetCols() &&
@@ -30,7 +30,7 @@ Tensor3D FlattenLayer::FeedForward(const Tensor3D& inputs)
 	return Tensor3D(m_OutputHeight, m_OutputWidth, m_OutputDepth, inputs.GetData());
 }
 
-Tensor3D FlattenLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFucntion, float learningRate)
+Tensor3D ReshapeLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFucntion, float learningRate)
 {
 	assert(m_InputHeight == inputs.GetRows() &&
 		m_InputWidth == inputs.GetCols() &&
@@ -46,7 +46,7 @@ Tensor3D FlattenLayer::BackPropagation(const Tensor3D& inputs, const CostFunctio
 	return Tensor3D(m_InputHeight, m_InputWidth, m_InputDepth, std::move(costs));
 }
 
-LayerShape FlattenLayer::GetLayerShape() const
+LayerShape ReshapeLayer::GetLayerShape() const
 {
 	return
 	{
@@ -55,7 +55,7 @@ LayerShape FlattenLayer::GetLayerShape() const
 	};
 }
 
-std::string FlattenLayer::ToString() const
+std::string ReshapeLayer::ToString() const
 {
 	std::stringstream ss;
 
@@ -67,7 +67,7 @@ std::string FlattenLayer::ToString() const
 	return ss.str();
 }
 
-void FlattenLayer::FromString(const std::string& data)
+void ReshapeLayer::FromString(const std::string& data)
 {
 	std::size_t numsStartPos = data.find(']');
 	assert(data[0] == '[' && numsStartPos != std::string::npos && "Invalid hyperparameter format.");
@@ -92,7 +92,7 @@ void FlattenLayer::FromString(const std::string& data)
 	}
 }
 
-std::string FlattenLayer::ToDebugString() const
+std::string ReshapeLayer::ToDebugString() const
 {
 	std::stringstream ss;
 
@@ -102,7 +102,7 @@ std::string FlattenLayer::ToDebugString() const
 	return ss.str();
 }
 
-std::string FlattenLayer::Summarize() const
+std::string ReshapeLayer::Summarize() const
 {
 	std::stringstream ss;
 

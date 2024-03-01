@@ -140,12 +140,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="src\Classifier.cpp" />
+    <ClCompile Include="src\AutoencoderTrainer.cpp" />
+    <ClCompile Include="src\ClassificationTrainer.cpp" />
+    <ClCompile Include="src\Trainer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Classifier.h" />
+    <ClInclude Include="src\AutoencoderTrainer.h" />
+    <ClInclude Include="src\ClassificationTrainer.h" />
     <ClInclude Include="src\CostFunctionFactory.h" />
     <ClInclude Include="src\Timer.h" />
+    <ClInclude Include="src\Trainer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

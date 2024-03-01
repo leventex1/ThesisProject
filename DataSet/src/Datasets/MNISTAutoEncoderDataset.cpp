@@ -1,4 +1,4 @@
-#include "MNISTDataset.h"
+#include "MNISTAutoEncoderDataset.h"
 #include <assert.h>
 #include <random>
 #include <iostream>
@@ -16,18 +16,15 @@ static int32_t ReadInt(std::ifstream& file) {
 		(result << 24);
 }
 
-MNISTDataset::MNISTDataset(const std::string& imagesFilePath, const std::string& labelsFilePath)
+MNISTAutoEncoderDataset::MNISTAutoEncoderDataset(const std::string& imagesFilePath)
 	: m_SampleIndex(0)
 {
 	size_t imagesCount = LoadImages(imagesFilePath);
-	size_t labelsCount = LoadLabels(labelsFilePath);
-
-	assert(imagesCount == labelsCount && "Count of images and labels not match!");
 
 	m_EpochSize = imagesCount;
 }
 
-size_t MNISTDataset::LoadImages(const std::string& filePath)
+size_t MNISTAutoEncoderDataset::LoadImages(const std::string& filePath)
 {
 	std::ifstream file(filePath, std::ios::binary);
 	assert(file.is_open() && "Could not open MNIST images file!");
@@ -58,55 +55,30 @@ size_t MNISTDataset::LoadImages(const std::string& filePath)
 	return imagesCount;
 }
 
-size_t MNISTDataset::LoadLabels(const std::string& filePath)
-{
-	std::ifstream file(filePath, std::ios::binary);
-	assert(file.is_open() && "Could not open MNIST label file!");
-
-	int magicNumber = ReadInt(file);
-	int labelsCount = ReadInt(file);
-
-	assert(magicNumber == 2049 && "Invalid MNIST label file!");
-
-	unsigned char label = 0;
-	for (int i = 0; i < labelsCount; i++)
-	{
-		file.read((char*)&label, sizeof(label));
-		m_Labels.push_back(label);
-	}
-
-	file.close();
-
-	return labelsCount;
-}
-
-SampleShape MNISTDataset::GetSampleShape() const
+SampleShape MNISTAutoEncoderDataset::GetSampleShape() const
 {
 	return
 	{
 		28, 28, 1,
-		10, 1, 1
+		28, 28, 1
 	};
 }
 
-Sample MNISTDataset::GetSample() const
+Sample MNISTAutoEncoderDataset::GetSample() const
 {
-	Tensor3D label = Tensor3D(10, 1, 1);
-	label.SetAt(m_Labels[m_SampleIndex], 0, 0, 1.0f);
-
 	return
 	{
 		Tensor3D(28, 28, 1, (float*)m_Images[m_SampleIndex].GetData()),
-		label
+		Tensor3D(28, 28, 1, (float*)m_Images[m_SampleIndex].GetData())
 	};
 }
 
-void MNISTDataset::Next()
+void MNISTAutoEncoderDataset::Next()
 {
 	m_SampleIndex = (m_SampleIndex + 1) % m_EpochSize;
 }
 
-void MNISTDataset::Shuffle()
+void MNISTAutoEncoderDataset::Shuffle()
 {
 	std::random_device rd;
 
@@ -114,22 +86,19 @@ void MNISTDataset::Shuffle()
 	{
 		size_t swapIndex = rd() % m_EpochSize;
 		std::swap(m_Images[i], m_Images[swapIndex]);
-		std::swap(m_Labels[i], m_Labels[swapIndex]);
 	}
 }
 
-void MNISTDataset::Display() const
+void MNISTAutoEncoderDataset::Display() const
 {
 	Sample sample = GetSample();
-	auto pos = MaxPos(CreateWatcher(sample.Label, 0));
-	Display(CreateWatcher(sample.Input, 0), pos.first);
+	Display(CreateWatcher(sample.Input, 0));
 }
 
-void MNISTDataset::Display(const Tensor2D& tensor, int label)
+void MNISTAutoEncoderDataset::Display(const Tensor2D& tensor)
 {
 	const std::string charSequence = " `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
 
-	std::cout << "Label: " << label << std::endl;
 	for (size_t i = 0; i < tensor.GetRows(); i++)
 	{
 		for (size_t j = 0; j < tensor.GetCols(); j++)

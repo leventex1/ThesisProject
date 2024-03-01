@@ -2,12 +2,13 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 
 #include "Model.h"
 #include "DenseLayer.h"
 #include "ConvolutionalLayer.h"
 #include "SoftmaxLayer.h"
-#include "FlattenLayer.h"
+#include "ReshapeLayer.h"
 #include "MaxPoolingLayer.h"
 
 
@@ -23,12 +24,13 @@ void Model::AddLayer(const std::shared_ptr<Layer>& headLayer)
 	if (!m_RootLayer)
 	{
 		m_RootLayer = headLayer;
-		m_HeadLayer = m_RootLayer;
 		return;
 	}
 
-	m_HeadLayer->NextLayer = headLayer;
-	m_HeadLayer = m_HeadLayer->NextLayer;
+	std::shared_ptr<Layer> lastLayer = m_RootLayer;
+	while (lastLayer->NextLayer) lastLayer = lastLayer->NextLayer;
+
+	lastLayer->NextLayer = headLayer;
 }
 
 void Model::AddLayer(const std::string& layerName, const std::string& layerFromData)
@@ -36,7 +38,7 @@ void Model::AddLayer(const std::string& layerName, const std::string& layerFromD
 	if (layerName == DenseLayer::ClassName()) { AddLayer(std::make_shared<DenseLayer>(layerFromData)); return; }
 	if (layerName == ConvolutionalLayer::ClassName()) { AddLayer(std::make_shared<ConvolutionalLayer>(layerFromData)); return; }
 	if (layerName == SoftmaxLayer::ClassName()) { AddLayer(std::make_shared<SoftmaxLayer>(layerFromData)); return; }
-	if (layerName == FlattenLayer::ClassName()) { AddLayer(std::make_shared<FlattenLayer>(layerFromData)); return; }
+	if (layerName == ReshapeLayer::ClassName()) { AddLayer(std::make_shared<ReshapeLayer>(layerFromData)); return; }
 	if (layerName == MaxPoolingLayer::ClassName()) { AddLayer(std::make_shared<MaxPoolingLayer>(layerFromData)); return; }
 
 	assert(false && "Unknown layer name!");
@@ -100,7 +102,7 @@ void Model::Load(const std::string& filePath)
 	}
 }
 
-bool Model::IsModelCorrect() const
+bool Model::IsModelCorrect(int* errorAt) const
 {
 	assert(m_RootLayer != nullptr && "No layer available!");
 
@@ -108,7 +110,7 @@ bool Model::IsModelCorrect() const
 	LayerShape layerShape = m_RootLayer->GetLayerShape();
 	LayerShape nextLayerShape;
 
-
+	int layerIndex = 0;
 	while(nextLayer)
 	{
 		nextLayerShape = nextLayer->GetLayerShape();
@@ -116,10 +118,14 @@ bool Model::IsModelCorrect() const
 		if (layerShape.OutputRows != nextLayerShape.InputRows ||
 			layerShape.OutputCols != nextLayerShape.InputCols ||
 			layerShape.OutputDepth != nextLayerShape.InputDepth)
+		{
+			*errorAt = layerIndex;
 			return false;
+		}
 
 		layerShape = nextLayerShape;
 		nextLayer = nextLayer->NextLayer;
+		layerIndex++;
 	}
 
 	return true;
@@ -130,7 +136,10 @@ ModelShape Model::GetModelShape() const
 	assert(m_RootLayer != nullptr && "No layer available!");
 
 	LayerShape rootShape = m_RootLayer->GetLayerShape();
-	LayerShape headShape = m_HeadLayer->GetLayerShape();
+
+	std::shared_ptr<Layer> lastLayer = m_RootLayer;
+	while (lastLayer->NextLayer) lastLayer = lastLayer->NextLayer;
+	LayerShape headShape = lastLayer->GetLayerShape();
 
 	return
 	{
@@ -147,9 +156,41 @@ void Model::Summarize() const
 
 	while (layer)
 	{
-		std::cout << layer->Summarize() << std::endl;
+		LayerShape layerShape = layer->GetLayerShape();
+		ActivationFunciton activatin = layer->GetActivationFunction();
+		std::string special = layer->GetSepcialParams();
+
+		std::cout << std::left;
+		std::cout << std::setw(28) << (layer->GetName() + ": ");
+		std::cout << std::setw(24) << ("Input: (" + std::to_string(layerShape.InputRows) + ", " + std::to_string(layerShape.InputCols) + ", " + std::to_string(layerShape.InputDepth) + ")" + ", ");
+		std::cout << std::setw(24) << ("Output: (" + std::to_string(layerShape.OutputRows) + ", " + std::to_string(layerShape.OutputCols) + ", " + std::to_string(layerShape.OutputDepth) + ")" + ", ");
+		std::cout << std::setw(32) << ("Activation: " + (activatin.Name.size() > 0 ? activatin.Name : "-") + " (" + (activatin.Params.size() > 0 ? activatin.Params : "-") + ")" + ", ");
+		std::cout << std::setw(28) << ("# Learnable params: " + std::to_string(layer->GetLearnableParams()) + ", ");
+		std::cout << std::setw(100) << ("Special: " + (special.size() > 0 ? special : "-"));
+		std::cout << std::endl << std::right;
+
+
 		layer = layer->NextLayer;
 	}
+}
+
+const std::shared_ptr<Layer>& Model::GetLayer(size_t i)
+{
+	assert(m_RootLayer != nullptr && "No layer available!");
+	if (!m_RootLayer)
+		return m_RootLayer;
+
+	std::shared_ptr<Layer> layer = m_RootLayer;
+	for (size_t j = 0; j < i; j++)
+	{
+		if (!layer->NextLayer)
+		{
+			return layer;
+		}
+		layer = layer->NextLayer;
+	}
+
+	return layer;
 }
 
 namespace_end

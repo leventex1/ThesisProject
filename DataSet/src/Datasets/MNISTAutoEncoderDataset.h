@@ -8,10 +8,10 @@
 
 namespace_dataset_start
 
-class LIBRARY_API MNISTDataset : public Dataset
+class LIBRARY_API MNISTAutoEncoderDataset : public Dataset
 {
 public:
-	MNISTDataset(const std::string& imagesFilePath, const std::string& labelsFilePath);
+	MNISTAutoEncoderDataset(const std::string& imagesFilePath);
 
 	virtual SampleShape GetSampleShape() const;
 
@@ -22,17 +22,16 @@ public:
 	virtual void Shuffle();
 
 	void Display() const;
-	static void Display(const Tensor2D& tensor, int label = -1);
+	static void Display(const Tensor2D& tensor);
 
 private:
 	size_t LoadImages(const std::string& filePath);
-	size_t LoadLabels(const std::string& filePath);
 
 private:
 	std::vector<Tensor2D> m_Images;
-	std::vector<unsigned char> m_Labels;
 	size_t m_EpochSize;
 	size_t m_SampleIndex;
 };
 
 namespace_dataset_end
+#pragma once

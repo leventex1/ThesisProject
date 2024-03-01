@@ -140,10 +140,12 @@
     <ClInclude Include="DatasetCore.h" />
     <ClInclude Include="MogiDataset.h" />
     <ClInclude Include="src\Dataset.h" />
+    <ClInclude Include="src\Datasets\MNISTAutoEncoderDataset.h" />
     <ClInclude Include="src\Datasets\MNISTDataset.h" />
     <ClInclude Include="src\Datasets\XORDataset.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Datasets\MNISTAutoEncoderDataset.cpp" />
     <ClCompile Include="src\Datasets\MNISTDataset.cpp" />
     <ClCompile Include="src\Datasets\XORDataset.cpp" />
   </ItemGroup>

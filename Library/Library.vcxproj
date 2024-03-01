@@ -141,7 +141,8 @@
     <ClInclude Include="src\NeuralNetwork\CostF.h" />
     <ClInclude Include="src\NeuralNetwork\DenseLayer.h" />
     <ClInclude Include="src\NeuralNetwork\ActivationF.h" />
-    <ClInclude Include="src\NeuralNetwork\FlattenLayer.h" />
+    <ClInclude Include="src\NeuralNetwork\NearestUpsamplingLayer.h" />
+    <ClInclude Include="src\NeuralNetwork\ReshapeLayer.h" />
     <ClInclude Include="src\NeuralNetwork\Initializer.h" />
     <ClInclude Include="src\NeuralNetwork\Layer.h" />
     <ClInclude Include="src\NeuralNetwork\MaxPoolingLayer.h" />
@@ -155,7 +156,8 @@
     <ClCompile Include="src\Math\Tensor3D.cpp" />
     <ClCompile Include="src\NeuralNetwork\ConvolutionalLayer.cpp" />
     <ClCompile Include="src\NeuralNetwork\DenseLayer.cpp" />
-    <ClCompile Include="src\NeuralNetwork\FlattenLayer.cpp" />
+    <ClCompile Include="src\NeuralNetwork\NearestUpsamplingLayer.cpp" />
+    <ClCompile Include="src\NeuralNetwork\ReshapeLayer.cpp" />
     <ClCompile Include="src\NeuralNetwork\MaxPoolingLayer.cpp" />
     <ClCompile Include="src\NeuralNetwork\Model.cpp" />
     <ClCompile Include="src\NeuralNetwork\SoftmaxLayer.cpp" />

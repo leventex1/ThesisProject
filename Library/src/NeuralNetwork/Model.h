@@ -30,14 +30,15 @@ public:
 	void Save(const std::string& filePath) const;
 	void Load(const std::string& filePath);
 
-	bool IsModelCorrect() const;
+	bool IsModelCorrect(int* errorAt=nullptr) const;
 	ModelShape GetModelShape() const;
 	void Summarize() const;
+
+	const std::shared_ptr<Layer>& GetLayer(size_t i);
 
 	inline const std::shared_ptr<Layer>& GetRootLayer() const { return m_RootLayer; }
 private:
 	std::shared_ptr<Layer> m_RootLayer = nullptr;
-	std::shared_ptr<Layer> m_HeadLayer = nullptr;
 };
 
 namespace_end

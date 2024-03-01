@@ -57,10 +57,13 @@
     <ClInclude Include="src\NeuralNetwork\ConvolutionalLayer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\NeuralNetwork\FlattenLayer.h">
+    <ClInclude Include="src\NeuralNetwork\ReshapeLayer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\NeuralNetwork\MaxPoolingLayer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\NeuralNetwork\NearestUpsamplingLayer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -89,10 +92,13 @@
     <ClCompile Include="src\NeuralNetwork\ConvolutionalLayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\NeuralNetwork\FlattenLayer.cpp">
+    <ClCompile Include="src\NeuralNetwork\ReshapeLayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\NeuralNetwork\MaxPoolingLayer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\NeuralNetwork\NearestUpsamplingLayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

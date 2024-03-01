@@ -6,6 +6,7 @@
 #include "Core.h"
 #include "../Math/Tensor3D.h"
 #include "CostF.h"
+#include "ActivationF.h"
 
 
 namespace_start
@@ -42,9 +43,13 @@ public:
 	virtual std::string ToDebugString() const { assert(false && "Debug string not implemented!"); return ""; }
 	virtual std::string Summarize() const { assert(false && "Summarize not implemented!"); return "Unknown layer"; }
 
+	virtual ActivationFunciton GetActivationFunction() const = 0;
+	virtual size_t GetLearnableParams() const = 0;
+	virtual std::string GetSepcialParams() const = 0;
+
 	virtual void FromString(const std::string& data) = 0;
 
-	std::shared_ptr<Layer> NextLayer = nullptr;
+	std::shared_ptr<Layer> NextLayer;
 };
 
 namespace_end

@@ -23,6 +23,10 @@ public:
 	virtual std::string ToDebugString() const;
 	virtual std::string Summarize() const;
 
+	virtual ActivationFunciton GetActivationFunction() const { return m_ActivationFunction; }
+	virtual size_t GetLearnableParams() const { return m_Weights.GetSize() + m_Bias.GetSize(); };
+	virtual std::string GetSepcialParams() const { return ""; };
+
 	virtual void FromString(const std::string& data);
 
 	static std::string ClassName() { return "DenseLayer"; }

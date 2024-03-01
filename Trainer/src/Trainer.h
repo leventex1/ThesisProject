@@ -4,25 +4,26 @@
 #include "CostFunctionFactory.h"
 
 
-class Classifier
+class Trainer
 {
 public:
-	Classifier(
+	Trainer(
 		mogi::Model* model,
 		mogi::dataset::Dataset* training,
 		mogi::dataset::Dataset* testing,
 		CostFunctionFactory costFunctionFactory
 	);
 
-	void Train(
+	virtual void Train(
 		size_t epochs,
 		float startLearningRate,
 		float endLearningRate
 	);
 
-	float Validate(float& succesRate) const;  // Returns the average cost.
+	// Returns the average cost and set successRate. If there is no successRate in training set it to -1.
+	virtual float Validate(float* successRate=nullptr) const = 0;  
 
-private:
+protected:
 	mogi::Model* m_Model;
 	mogi::dataset::Dataset* m_TrainingDataset;
 	mogi::dataset::Dataset* m_TestingDataset;

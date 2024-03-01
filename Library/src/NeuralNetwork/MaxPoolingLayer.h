@@ -24,6 +24,10 @@ public:
 	virtual std::string ToDebugString() const;
 	virtual std::string Summarize() const;
 
+	virtual ActivationFunciton GetActivationFunction() const { return ActivationFunciton(); }
+	virtual size_t GetLearnableParams() const { return 0; };
+	virtual std::string GetSepcialParams() const { return "Pool: (" + std::to_string(m_PoolingHeight) + ", " + std::to_string(m_PoolingWidth) + "), Stride: 1"; };
+
 	virtual void FromString(const std::string& data);
 
 	static std::string ClassName() { return "MaxPoolingLayer"; }

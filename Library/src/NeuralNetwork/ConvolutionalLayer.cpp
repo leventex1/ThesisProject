@@ -8,8 +8,9 @@ namespace_start
 ConvolutionalLayer::ConvolutionalLayer(
 	size_t inputHeight, size_t inputWidth, size_t inputDepth,
 	size_t kernelHeight, size_t kernelWidth, size_t numKernels,
-	size_t padding, ActivationFunciton activationFunction, Initializer initializer
-) : m_ActivationFunction(activationFunction), m_Padding(padding), m_InputWidth(inputWidth), m_InputHeight(inputHeight), m_InputDepth(inputDepth), m_NumKernels(numKernels)
+	size_t padding, ActivationFunciton activationFunction, Initializer initializer,
+	bool isUseBias
+) : m_ActivationFunction(activationFunction), m_Padding(padding), m_InputWidth(inputWidth), m_InputHeight(inputHeight), m_InputDepth(inputDepth), m_NumKernels(numKernels), m_IsUseBias(isUseBias)
 {
 	assert(inputHeight == inputWidth && "Different input size ratio not supported!");
 	assert(kernelHeight == kernelWidth && "Different kernel size ratio not supported!");
@@ -18,7 +19,10 @@ ConvolutionalLayer::ConvolutionalLayer(
 	size_t outputHeight = CalcConvSize(inputHeight, kernelHeight, 1, padding);
 	size_t outputWidth = CalcConvSize(inputWidth, kernelWidth, 1, padding);
 
-	m_Bias = Tensor3D(outputHeight, outputWidth, numKernels, initializer.Init);
+	if (m_IsUseBias)
+	{
+		m_Bias = Tensor3D(outputHeight, outputWidth, numKernels, initializer.Init);
+	}
 	m_Kernels = Tensor3D(kernelHeight, kernelWidth, kernelDepth, initializer.Init);
 }
 
@@ -43,7 +47,10 @@ Tensor3D ConvolutionalLayer::FeedForward(const Tensor3D& inputs)
 		Convolution(outputSlice, inputs, kernelBlock, 1, m_Padding);
 	}
 
-	output.Add(m_Bias);
+	if (m_IsUseBias)
+	{
+		output.Add(m_Bias);
+	}
 	output.Map(m_ActivationFunction.Activation);
 	return output;
 }
@@ -63,7 +70,10 @@ Tensor3D ConvolutionalLayer::BackPropagation(const Tensor3D& inputs, const CostF
 		Tensor2D outputSlice = CreateWatcher(filterMap, d);
 		Convolution(outputSlice, inputs, kernelBlock, 1, m_Padding);
 	}
-	filterMap.Add(m_Bias);
+	if (m_IsUseBias)
+	{
+		filterMap.Add(m_Bias);
+	}
 
 	Tensor3D output = Map(filterMap, m_ActivationFunction.Activation);
 
@@ -96,10 +106,16 @@ Tensor3D ConvolutionalLayer::BackPropagation(const Tensor3D& inputs, const CostF
 	}
 
 	gradKernel.Map([learningRate](float v) -> float { return learningRate * v; });
-	gradBias.Map([learningRate](float v) -> float { return learningRate * v; });
+	if (m_IsUseBias)
+	{
+		gradBias.Map([learningRate](float v) -> float { return learningRate * v; });
+	}
 
 	m_Kernels.Sub(gradKernel);
-	m_Bias.Sub(gradBias);
+	if (m_IsUseBias)
+	{
+		m_Bias.Sub(gradBias);
+	}
 
 	return gradInput;
 }
@@ -119,7 +135,7 @@ std::string ConvolutionalLayer::ToString() const
 
 	ss << "[ " <<
 		m_InputWidth << " " << m_InputHeight << " " << m_InputDepth << " " << 
-		m_Kernels.GetRows() << " " << m_Kernels.GetCols() << " " << m_NumKernels << " " << m_Padding << " " <<
+		m_Kernels.GetRows() << " " << m_Kernels.GetCols() << " " << m_NumKernels << " " << m_Padding << " " << m_IsUseBias << " " <<
 		m_ActivationFunction.Name << " ( " << m_ActivationFunction.Params << " )" <<
 	" ]";
 
@@ -127,9 +143,12 @@ std::string ConvolutionalLayer::ToString() const
 	{
 		ss << " " << m_Kernels.GetData()[t];
 	}
-	for (size_t t = 0; t < m_Bias.GetSize(); t++)
+	if (m_IsUseBias)
 	{
-		ss << " " << m_Bias.GetData()[t];
+		for (size_t t = 0; t < m_Bias.GetSize(); t++)
+		{
+			ss << " " << m_Bias.GetData()[t];
+		}
 	}
 
 	return ss.str();
@@ -154,7 +173,7 @@ void ConvolutionalLayer::FromString(const std::string& data)
 
 	try
 	{
-		ss >> m_InputWidth >> m_InputHeight >> m_InputDepth >> kernelHeight >> kernelWidth >> m_NumKernels >> m_Padding;
+		ss >> m_InputWidth >> m_InputHeight >> m_InputDepth >> kernelHeight >> kernelWidth >> m_NumKernels >> m_Padding >> m_IsUseBias;
 		ss >> activationName;
 	}
 	catch (...)
@@ -176,9 +195,12 @@ void ConvolutionalLayer::FromString(const std::string& data)
 	{
 		iss >> m_Kernels.GetData()[t];
 	}
-	for (size_t t = 0; t < m_Bias.GetSize(); t++)
+	if (m_IsUseBias)
 	{
-		iss >> m_Bias.GetData()[t];
+		for (size_t t = 0; t < m_Bias.GetSize(); t++)
+		{
+			iss >> m_Bias.GetData()[t];
+		}
 	}
 }
 
