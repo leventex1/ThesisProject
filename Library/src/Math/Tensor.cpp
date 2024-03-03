@@ -5,6 +5,8 @@
 #include <vector>
 #include <future>
 
+#include "../ThreadPool.h"
+
 
 namespace_start
 
@@ -41,11 +43,42 @@ Tensor::Tensor(const Tensor& other)
 {
 	size_t size = other.GetSize();
 	Alloc(size);
+
+#ifdef ASYNC
+	ThreadPool* pool = ThreadPool::GetInstance();
+	int numThreads = pool->GetNumThreads();
+	int dataPerThread = (size + numThreads - 1) / numThreads;
+
+	std::vector<std::future<void>> threads;
+	for (size_t i = 0; i < numThreads; i++)
+	{
+		size_t startRow = i * dataPerThread;
+		int endRow = (i == numThreads - 1) ? size : (i + 1) * dataPerThread;
+
+		if (startRow >= size)
+			break;
+
+		threads.emplace_back(
+			pool->enqueue([startRow, endRow, this, &other] {
+				for (size_t i = startRow; i < endRow; ++i)
+				{
+					size_t otherTrueIndex = other.TraverseTo(i);
+					m_Data[i] = other.GetData()[otherTrueIndex];
+				}
+			})
+		);
+	}
+
+	for (auto& thread : threads) {
+		thread.get();
+	}
+#else
 	for (int i = 0; i < size; i++)
 	{
 		size_t otherTrueIndex = other.TraverseTo(i);
 		m_Data[i] = other.m_Data[otherTrueIndex];
 	}
+#endif // ASYNC
 }
 
 Tensor* Tensor::operator=(const Tensor& other)
@@ -98,13 +131,24 @@ void Tensor::Map(std::function<float(float v)> mapper)
 {
 
 #ifdef ASYNC
-	const int numThreads = std::max(1u, std::thread::hardware_concurrency());
+	ThreadPool* pool = ThreadPool::GetInstance();
+	int numThreads = pool->GetNumThreads();
 	int indexRange = (GetSize() + numThreads - 1) / numThreads;
-	{
-		std::vector<std::future<void>> threads;
+	std::vector<std::future<void>> threads;
 
-		for (size_t i = 0; i < numThreads; i++)
-			threads.push_back(std::async(std::launch::async, AsyncMap, indexRange, i * indexRange, this, mapper));
+	for (size_t i = 0; i < numThreads; i++)
+	{
+		//threads.push_back(std::async(std::launch::async, AsyncMap, indexRange, i * indexRange, this, mapper));
+		size_t offset = i * indexRange;
+		threads.emplace_back(
+			pool->enqueue([offset, indexRange, this, mapper] {
+				AsyncMap(indexRange, offset, this, mapper);
+			})
+		);
+	}
+
+	for (auto& thread : threads) {
+		thread.get();
 	}
 #else
 	for (int i = 0; i < GetSize(); i++)
@@ -115,7 +159,7 @@ void Tensor::Map(std::function<float(float v)> mapper)
 #endif // ASYNC
 }
 
-void AsyncElementWise(int indexRange, int offset, Tensor* v1, const Tensor* v2, std::function<float(float v1, float v2)> operation) 
+void AsyncElementWise(int indexRange, int offset, Tensor* v1, const Tensor* v2, std::function<float(float v1, float v2)> operation)
 {
 	for (size_t i = 0; i < indexRange; i++)
 	{
@@ -133,13 +177,24 @@ void Tensor::ElementWise(const Tensor& other, std::function<float(float v1, floa
 	assert(GetSize() == other.GetSize() && "Tensor sizes not match!");
 
 #ifdef ASYNC
-	const int numThreads = std::max(1u, std::thread::hardware_concurrency());
+	ThreadPool* pool = ThreadPool::GetInstance();
+	int numThreads = pool->GetNumThreads();
 	int indexRange = (GetSize() + numThreads - 1) / numThreads;
-	{
-		std::vector<std::future<void>> threads;
+	std::vector<std::future<void>> threads;
 
-		for(size_t i = 0; i < numThreads; i++)
-			threads.push_back(std::async(std::launch::async, AsyncElementWise, indexRange, i * indexRange, this, &other, operation));
+	for (size_t i = 0; i < numThreads; i++)
+	{
+		//threads.push_back(std::async(std::launch::async, AsyncElementWise, indexRange, i * indexRange, this, &other, operation));
+		size_t offset = i * indexRange;
+		threads.emplace_back(
+			pool->enqueue([offset, indexRange, this, &other, operation] {
+				AsyncElementWise(indexRange, offset, this, &other, operation);
+			})
+		);
+	}
+
+	for (auto& thread : threads) {
+		thread.get();
 	}
 #else
 	for (int i = 0; i < GetSize(); i++)

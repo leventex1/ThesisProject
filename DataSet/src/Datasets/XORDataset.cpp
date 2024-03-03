@@ -4,45 +4,45 @@
 
 namespace_dataset_start
 
-static const std::vector<Tensor2D> DataSamples = 
-{
-		{
-			{ 0.0f },
-			{ 0.0f }
-		},
-		{
-			{ 1.0f },
-			{ 0.0f }
-		},
-		{
-			{ 0.0f },
-			{ 1.0f }
-		},
-		{
-			{ 1.0f },
-			{ 1.0f }
-		}
-};
-
-static const std::vector<Tensor2D> DataTargets = 
-{
-		{
-			{ 0.0f },
-		},
-		{
-			{ 1.0f },
-		},
-		{
-			{ 1.0f },
-		},
-		{
-			{ 0.0f },
-		}
-};
-
 XORDataset::XORDataset()
-	: m_SampleIndex(0), m_Samples(DataSamples), m_Labels(DataTargets)
+	: m_SampleIndex(0)
 {
+	m_Samples = 
+	{
+		{
+			{ 0.0f },
+			{ 0.0f }
+		},
+		{
+			{ 1.0f },
+			{ 0.0f }
+		},
+		{
+			{ 0.0f },
+			{ 1.0f }
+		},
+		{
+			{ 1.0f },
+			{ 1.0f }
+		}
+	};
+
+	m_Labels = 
+	{
+		{
+			{ 0.0f },
+		},
+		{
+			{ 1.0f },
+		},
+		{
+			{ 1.0f },
+		},
+		{
+			{ 0.0f },
+		}
+	};
+
 }
 
 SampleShape XORDataset::GetSampleShape() const

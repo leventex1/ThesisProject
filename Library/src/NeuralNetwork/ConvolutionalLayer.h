@@ -17,21 +17,22 @@ public:
 	);
 	ConvolutionalLayer(const std::string& fromString);
 
-	virtual Tensor3D FeedForward(const Tensor3D& inputs);
-	virtual Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate, size_t t);
+	virtual void InitOptimizer(OptimizerFactory optimizerFactory) override;
+	virtual Tensor3D FeedForward(const Tensor3D& inputs) override;
+	virtual Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate, size_t t) override;
 
-	virtual LayerShape GetLayerShape() const;
+	virtual LayerShape GetLayerShape() const override;
 
-	virtual std::string GetName() const { return ClassName(); }
-	virtual std::string ToString() const;
-	virtual std::string ToDebugString() const;
-	virtual std::string Summarize() const;
+	virtual std::string GetName() const override { return ClassName(); }
+	virtual std::string ToString() const override;
+	virtual std::string ToDebugString() const override;
+	virtual std::string Summarize() const override;
 
-	virtual ActivationFunciton GetActivationFunction() const { return m_ActivationFunction; }
-	virtual size_t GetLearnableParams() const { return m_Kernels.GetSize() + (m_IsUseBias ? m_Bias.GetSize() : 0); };
-	virtual std::string GetSepcialParams() const { return "Kernel: (" + std::to_string(m_Kernels.GetRows()) + ", " + std::to_string(m_Kernels.GetCols()) + ", " + std::to_string(m_InputDepth) + " * " + std::to_string(m_NumKernels) + "), Padding: " + std::to_string(m_Padding) + ", Stride: 1"; };
+	virtual ActivationFunciton GetActivationFunction() const override { return m_ActivationFunction; }
+	virtual size_t GetLearnableParams() const override { return m_Kernels.GetSize() + (m_IsUseBias ? m_Bias.GetSize() : 0); };
+	virtual std::string GetSepcialParams() const override { return "Kernel: (" + std::to_string(m_Kernels.GetRows()) + ", " + std::to_string(m_Kernels.GetCols()) + ", " + std::to_string(m_InputDepth) + " * " + std::to_string(m_NumKernels) + "), Padding: " + std::to_string(m_Padding) + ", Stride: 1"; };
 
-	virtual void FromString(const std::string& data);
+	virtual void FromString(const std::string& data) override;
 
 	static std::string ClassName() { return "ConvolutionalLayer"; }
 private:
@@ -44,6 +45,9 @@ private:
 	size_t m_Padding;
 
 	bool m_IsUseBias;
+
+	std::unique_ptr<Optimizer> m_KernelOptimizer;
+	std::unique_ptr<Optimizer> m_BiasOptimizer;
 };
 
 namespace_end

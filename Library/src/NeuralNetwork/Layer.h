@@ -8,6 +8,8 @@
 #include "CostF.h"
 #include "ActivationF.h"
 
+#include "Optimizer.h"
+
 
 namespace_start
 
@@ -22,6 +24,13 @@ class LIBRARY_API Layer
 public:
 	virtual ~Layer() { }
 
+	/*
+		Implement gradient optimizer algorithms for learnable parameters, Like adam, or SGD optimizer.
+		Implement! the save and loading of these optimizers witht the layer itself. 
+		With some optimizers like adam, there is a state that needs to be stored between training sessions.
+	*/
+	virtual void InitOptimizer(OptimizerFactory optimizerFactory) { };
+
 	virtual Tensor3D FeedForward(const Tensor3D& inputs) = 0;
 
 	/*
@@ -33,8 +42,6 @@ public:
 		Returns the derivated cost respect to the inputs.
 
 		t: learning time step.
-
-		TODO: implement bacch gradient descent.
 	*/
 	virtual Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate, size_t t) = 0;
 

@@ -31,6 +31,13 @@ ConvolutionalLayer::ConvolutionalLayer(const std::string& fromString)
 	FromString(fromString);
 }
 
+void ConvolutionalLayer::InitOptimizer(OptimizerFactory optimizerFactory)
+{
+	m_KernelOptimizer = optimizerFactory.Get(m_Kernels.GetSize());
+	if(m_IsUseBias)
+		m_BiasOptimizer = optimizerFactory.Get(m_Bias.GetSize());;
+}
+
 Tensor3D ConvolutionalLayer::FeedForward(const Tensor3D& inputs)
 {
 	assert(inputs.GetRows() == m_InputHeight && inputs.GetCols() == m_InputWidth && inputs.GetDepth() == m_InputDepth 
@@ -105,16 +112,11 @@ Tensor3D ConvolutionalLayer::BackPropagation(const Tensor3D& inputs, const CostF
 		ConvolutionKernelFlip(gradInput, grad, kernelBlock, 1, gradInputPadding);
 	}
 
-	gradKernel.Map([learningRate](float v) -> float { return learningRate * v; });
-	if (m_IsUseBias)
-	{
-		gradBias.Map([learningRate](float v) -> float { return learningRate * v; });
-	}
 
-	m_Kernels.Sub(gradKernel);
+	m_KernelOptimizer->Update(&m_Kernels, &gradKernel, learningRate);
 	if (m_IsUseBias)
 	{
-		m_Bias.Sub(gradBias);
+		m_BiasOptimizer->Update(&m_Bias, &gradBias, learningRate);
 	}
 
 	return gradInput;

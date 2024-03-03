@@ -1,8 +1,10 @@
 #pragma once
 
+#include "src/ThreadPool.h"
+
 #include "src/Math/Tensor2D.h"
 #include "src/Math/Tensor3D.h"
-#include "src/Math//Operation.h"
+#include "src/Math/Operation.h"
 
 #include "src/NeuralNetwork/ActivationF.h"
 #include "src/NeuralNetwork/CostF.h"

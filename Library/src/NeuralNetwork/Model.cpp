@@ -46,6 +46,16 @@ void Model::AddLayer(const std::string& layerName, const std::string& layerFromD
 	assert(false && "Unknown layer name!");
 }
 
+void Model::InitializeOptimizer(OptimizerFactory optimizerFactory)
+{
+	std::shared_ptr<Layer> layer = m_RootLayer;
+	while (layer)
+	{
+		layer->InitOptimizer(optimizerFactory);
+		layer = layer->NextLayer;
+	}
+}
+
 Tensor3D Model::FeedForward(const Tensor3D& inputs) const
 {
 	assert(m_RootLayer != nullptr && "No layer available!");
@@ -164,8 +174,8 @@ void Model::Summarize() const
 
 		std::cout << std::left;
 		std::cout << std::setw(28) << (layer->GetName() + ": ");
-		std::cout << std::setw(32) << ("Input: (" + std::to_string(layerShape.InputRows) + ", " + std::to_string(layerShape.InputCols) + ", " + std::to_string(layerShape.InputDepth) + ")" + ", ");
-		std::cout << std::setw(32) << ("Output: (" + std::to_string(layerShape.OutputRows) + ", " + std::to_string(layerShape.OutputCols) + ", " + std::to_string(layerShape.OutputDepth) + ")" + ", ");
+		std::cout << std::setw(28) << ("Input: (" + std::to_string(layerShape.InputRows) + ", " + std::to_string(layerShape.InputCols) + ", " + std::to_string(layerShape.InputDepth) + ")" + ", ");
+		std::cout << std::setw(28) << ("Output: (" + std::to_string(layerShape.OutputRows) + ", " + std::to_string(layerShape.OutputCols) + ", " + std::to_string(layerShape.OutputDepth) + ")" + ", ");
 		std::cout << std::setw(32) << ("Activation: " + (activatin.Name.size() > 0 ? activatin.Name : "-") + " (" + (activatin.Params.size() > 0 ? activatin.Params : "-") + ")" + ", ");
 		std::cout << std::setw(28) << ("# Learnable params: " + std::to_string(layer->GetLearnableParams()) + ", ");
 		std::cout << std::setw(40) << ("Special: " + (special.size() > 0 ? special : "-"));

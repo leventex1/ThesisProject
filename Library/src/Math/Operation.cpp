@@ -7,6 +7,7 @@
 
 #include <future>
 #include <mutex>
+#include "../ThreadPool.h"
 
 
 namespace_start
@@ -124,7 +125,7 @@ Tensor2D Div(const Tensor2D& t1, const Tensor2D& t2)
 
 std::pair<size_t, size_t> MaxPos(const Tensor2D& tensor)
 {
-	assert(tensor.GetSize() > 1 && "No value in tensor!");
+	assert(tensor.GetSize() > 0 && "No value in tensor!");
 
 	std::pair<size_t, size_t> res = { 0, 0 };
 	float min = tensor.GetAt(0, 0);
@@ -159,19 +160,10 @@ Tensor2D Transpose(const Tensor2D& t)
 	return res;
 }
 
-void AsyncMatrixtMult(int indexRangeRows, int indexRangeCols, int offsetRows, int offsetCols, Tensor2D* res, const Tensor2D* left, const Tensor2D* right)
+void AsyncMatrixMult(int startRow, int endRow, int startCol, int endCol, Tensor2D* res, const Tensor2D* left, const Tensor2D* right)
 {
-	for (size_t i = 0; i < indexRangeRows; i++)
-	{
-		size_t row = offsetRows + i;
-		if (row >= res->GetRows())
-			continue;
-
-		for (size_t j = 0; j < indexRangeCols; j++)
-		{
-			size_t col = offsetCols + j;
-			if (col >= res->GetCols())
-				break;
+	for (int row = startRow; row < endRow; ++row) {
+		for (int col = startCol; col < endCol; ++col) {
 
 			float product = 0.0f;
 			for (size_t t = 0; t < left->GetCols(); t++)
@@ -194,14 +186,23 @@ Tensor2D MatrixMult(const Tensor2D& left, const Tensor2D& right, bool useCuda)
 	Tensor2D res(left.GetRows(), right.GetCols());
 
 #ifdef ASYNC
-	const int numThreads = std::max(1u, std::thread::hardware_concurrency());
-	int indexRangeRows = (res.GetRows() + numThreads - 1) / numThreads;
-	int indexRangeCols = (res.GetCols() + numThreads - 1) / numThreads;
+	ThreadPool* pool = ThreadPool::GetInstance();
+	int numThreads = pool->GetNumThreads();
+	int rowsPerThread = res.GetRows() / numThreads;
+
+	std::vector<std::future<void>> threads;
+	for (size_t i = 0; i < numThreads; i++)
 	{
-		std::vector<std::future<void>> threads;
-		for (size_t i = 0; i < numThreads; i++)
-			for (size_t j = 0; j < numThreads; j++)
-			threads.push_back(std::async(std::launch::async, AsyncMatrixtMult, indexRangeRows, indexRangeCols, i * indexRangeRows, j * indexRangeCols, &res, &left, &right));
+		size_t startRow = i * rowsPerThread;
+		int endRow = (i == numThreads - 1) ? res.GetRows() : (i + 1) * rowsPerThread;
+
+		threads.emplace_back(
+			pool->enqueue(AsyncMatrixMult, startRow, endRow, 0, res.GetCols(), &res, &left, &right)
+		);
+	}
+
+	for (auto& thread : threads) {
+		thread.get();
 	}
 #else
 	for (size_t row = 0; row < res.GetRows(); row++)
@@ -221,11 +222,46 @@ Tensor2D MatrixMult(const Tensor2D& left, const Tensor2D& right, bool useCuda)
 	return res;
 }
 
+void AsyncMatrixMultLeftTranspose(int startRow, int endRow, int startCol, int endCol, Tensor2D* res, const Tensor2D* left, const Tensor2D* right)
+{
+	for (int row = startRow; row < endRow; ++row) {
+		for (int col = startCol; col < endCol; ++col) {
+
+			float product = 0.0f;
+			for (size_t t = 0; t < left->GetRows(); t++)
+			{
+				product += left->GetAt(t, row) * right->GetAt(t, col);
+			}
+			res->SetAt(row, col, product);
+		}
+	}
+}
+
 Tensor2D MatrixMultLeftTranspose(const Tensor2D& left, const Tensor2D& right)
 {
 	assert(left.GetRows() == right.GetRows() && "Matrix params for matrix multiplication not math! Left.rows(after taking transpose) != Right.rows");
 	Tensor2D res(left.GetCols(), right.GetCols());
 
+#ifdef ASYNC
+	ThreadPool* pool = ThreadPool::GetInstance();
+	int numThreads = pool->GetNumThreads();
+	int rowsPerThread = res.GetRows() / numThreads;
+
+	std::vector<std::future<void>> threads;
+	for (size_t i = 0; i < numThreads; i++)
+	{
+		size_t startRow = i * rowsPerThread;
+		int endRow = (i == numThreads - 1) ? res.GetRows() : (i + 1) * rowsPerThread;
+
+		threads.emplace_back(
+			pool->enqueue(AsyncMatrixMultLeftTranspose, startRow, endRow, 0, res.GetCols(), &res, &left, &right)
+		);
+	}
+
+	for (auto& thread : threads) {
+		thread.get();
+	}
+#else
 	for (size_t row = 0; row < res.GetRows(); row++)
 	{
 		for (size_t col = 0; col < res.GetCols(); col++)
@@ -238,8 +274,24 @@ Tensor2D MatrixMultLeftTranspose(const Tensor2D& left, const Tensor2D& right)
 			res.SetAt(row, col, product);
 		}
 	}
+#endif
 
 	return res;
+}
+
+void AsyncMatrixMulRightTranspose(int startRow, int endRow, int startCol, int endCol, Tensor2D* res, const Tensor2D* left, const Tensor2D* right)
+{
+	for (int row = startRow; row < endRow; ++row) {
+		for (int col = startCol; col < endCol; ++col) {
+
+			float product = 0.0f;
+			for (size_t t = 0; t < left->GetCols(); t++)
+			{
+				product += left->GetAt(row, t) * right->GetAt(col, t);
+			}
+			res->SetAt(row, col, product);
+		}
+	}
 }
 
 Tensor2D MatrixMultRightTranspose(const Tensor2D& left, const Tensor2D& right)
@@ -247,6 +299,26 @@ Tensor2D MatrixMultRightTranspose(const Tensor2D& left, const Tensor2D& right)
 	assert(left.GetCols() == right.GetCols() && "Matrix params for matrix multiplication not math! Left.rows(after taking transpose) != Right.rows");
 	Tensor2D res(left.GetRows(), right.GetRows());
 
+#ifdef ASYNC
+	ThreadPool* pool = ThreadPool::GetInstance();
+	int numThreads = pool->GetNumThreads();
+	int rowsPerThread = res.GetRows() / numThreads;
+
+	std::vector<std::future<void>> threads;
+	for (size_t i = 0; i < numThreads; i++)
+	{
+		size_t startRow = i * rowsPerThread;
+		int endRow = (i == numThreads - 1) ? res.GetRows() : (i + 1) * rowsPerThread;
+
+		threads.emplace_back(
+			pool->enqueue(AsyncMatrixMulRightTranspose, startRow, endRow, 0, res.GetCols(), &res, &left, &right)
+		);
+	}
+
+	for (auto& thread : threads) {
+		thread.get();
+	}
+#else
 	for (size_t row = 0; row < res.GetRows(); row++)
 	{
 		for (size_t col = 0; col < res.GetCols(); col++)
@@ -259,6 +331,7 @@ Tensor2D MatrixMultRightTranspose(const Tensor2D& left, const Tensor2D& right)
 			res.SetAt(row, col, product);
 		}
 	}
+#endif
 
 	return res;
 }

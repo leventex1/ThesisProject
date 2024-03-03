@@ -1,6 +1,6 @@
 #pragma once
 
-#define ASYNC
+//#define ASYNC
 
 #define namespace_start namespace mogi {
 #define namespace_end }

@@ -24,6 +24,7 @@ public:
 	void AddLayer(const std::shared_ptr<Layer>& headLayer);
 	void AddLayer(const std::string& layerName, const std::string& layerFromData);
 
+	void InitializeOptimizer(OptimizerFactory optimizerFactory);
 	Tensor3D FeedForward(const Tensor3D& inputs) const;
 	Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate, size_t t);
 

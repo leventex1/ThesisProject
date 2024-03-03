@@ -12,12 +12,6 @@ DenseLayer::DenseLayer(size_t inputNodes, size_t outputNodes, ActivationFunciton
 {
 	m_Weights = Random2D(outputNodes, inputNodes, -1.0f, 1.0f);
 	m_Bias = Random2D(outputNodes, 1, -1.0f, 1.0f);
-
-	m_FirstMomentsWeights = Tensor2D(outputNodes, inputNodes);
-	m_SecondMomentsWeights = Tensor2D(outputNodes, inputNodes);
-	m_FirstMomentsBiases = Tensor2D(outputNodes, 1);
-	m_SecondMomentsBiases = Tensor2D(outputNodes, 1);
-	m_TrainingTimeStep = 0;
 }
 
 DenseLayer::DenseLayer(size_t inputNodes, size_t outputNodes, ActivationFunciton activationFunction, Initializer initializer)
@@ -25,12 +19,6 @@ DenseLayer::DenseLayer(size_t inputNodes, size_t outputNodes, ActivationFunciton
 {
 	m_Weights = Tensor2D(outputNodes, inputNodes, initializer.Init);
 	m_Bias = Tensor2D(outputNodes, 1, initializer.Init);
-
-	m_FirstMomentsWeights = Tensor2D(outputNodes, inputNodes);
-	m_SecondMomentsWeights = Tensor2D(outputNodes, inputNodes);
-	m_FirstMomentsBiases = Tensor2D(outputNodes, 1);
-	m_SecondMomentsBiases = Tensor2D(outputNodes, 1);
-	m_TrainingTimeStep = 0;
 }
 
 DenseLayer::DenseLayer(const std::string& fromString)
@@ -38,6 +26,11 @@ DenseLayer::DenseLayer(const std::string& fromString)
 	FromString(fromString);
 }
 
+void DenseLayer::InitOptimizer(OptimizerFactory optimizerFactory)
+{
+	m_WeightsOptimizer = optimizerFactory.Get(m_Weights.GetSize());
+	m_BiasOptimizer = optimizerFactory.Get(m_Bias.GetSize());
+}
 
 Tensor3D DenseLayer::FeedForward(const Tensor3D& inputs)
 {
@@ -54,12 +47,12 @@ Tensor3D DenseLayer::FeedForward(const Tensor3D& inputs)
 
 Tensor3D DenseLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate, size_t t)
 {
-	//assert(inputs.size() >= 1 && "Got no input!");
+	if (!m_WeightsOptimizer || !m_BiasOptimizer)
+		throw std::exception("No optimizer for training!");
+
 	assert(inputs.GetDepth() == 1 && "Dense layer's input should contain a tensor with a depth of 1!");
 	assert(inputs.GetCols() == 1 && "Dense layer's input should contain 1 column!");
 	assert(inputs.GetRows() == m_Weights.GetCols() && "Dense layer's input should contain as many rows as the weight's cols!");
-
-	// TODO: implement batch gradient descent.
 
 	LayerShape layerShape = GetLayerShape();
 
@@ -73,7 +66,6 @@ Tensor3D DenseLayer::BackPropagation(const Tensor3D& inputs, const CostFunction&
 								NextLayer->BackPropagation(output, costFunction, learningRate, t) : 
 								costFunction.DiffCost(output);
 
-	//assert(costs.size() == 1 && "Dense layer's cost is 1 Tensor2D");
 	assert(inputs.GetDepth() == 1 && "Dense layer's cost should contain a tensor with a depth of 1!");
 	assert(costs.GetCols() == 1 && "Dense layer's cost should contain 1 column!");
 	assert(costs.GetRows() == m_Weights.GetRows() && "Dense layer's cost should contain as many rows as the weight's rows!");
@@ -86,29 +78,8 @@ Tensor3D DenseLayer::BackPropagation(const Tensor3D& inputs, const CostFunction&
 	Tensor2D& gradBiases = diffSum;
 	Tensor2D gradCosts = MatrixMultLeftTranspose(m_Weights, diffSum);
 
-	m_TrainingTimeStep++;
-	const float b1 = 0.9f;
-	const float b2 = 0.999f;
-	const float e = 1.0f / 100000000;
-	size_t timeStep = m_TrainingTimeStep;
-
-	m_FirstMomentsWeights.ElementWise(gradWeights, [b1](float m, float g) -> float { return b1 * m + (1.0f - b1) * g; });
-	m_SecondMomentsWeights.ElementWise(gradWeights, [b2](float v, float g) -> float { return b2 * v + (1.0f - b2) * g * g; });
-	m_FirstMomentsBiases.ElementWise(gradBiases, [b1](float m, float g) -> float { return b1 * m + (1.0f - b1) * g; });
-	m_SecondMomentsBiases.ElementWise(gradBiases, [b2](float v, float g) -> float { return b2 * v + (1.0f - b2) * g * g; });
-
-	Tensor2D correctedFirstMomentsWeigts = Map(m_FirstMomentsWeights, [b1, timeStep](float v) -> float { return v / (1.0f - std::pow(b1, timeStep)); });
-	Tensor2D correctedSecondMomentsWeigts = Map(m_SecondMomentsWeights, [b2, timeStep](float v) -> float { return v / (1.0f - std::pow(b2, timeStep)); });
-	Tensor2D correctedFirstMomentsBiases = Map(m_FirstMomentsBiases, [b1, timeStep](float v) -> float { return v / (1.0f - std::pow(b1, timeStep)); });
-	Tensor2D correctedSecondMomentsBiases = Map(m_SecondMomentsWeights, [b2, timeStep](float v) -> float { return v / (1.0f - std::pow(b2, timeStep)); });
-
-	gradWeights.ElementWise(correctedFirstMomentsWeigts, [learningRate](float v1, float m) -> float { return learningRate * m; });
-	gradWeights.ElementWise(correctedSecondMomentsWeigts, [e](float v1, float v) -> float { return v1 / (sqrt(v) + e); });
-	gradBiases.ElementWise(correctedFirstMomentsBiases, [learningRate](float v1, float m) -> float { return learningRate * m; });
-	gradBiases.ElementWise(correctedSecondMomentsBiases, [e](float v1, float v) -> float { return v1 / (sqrt(v) + e); });
-
-	m_Weights.Sub(gradWeights);
-	m_Bias.Sub(gradBiases);
+	m_WeightsOptimizer->Update(&m_Weights, &gradWeights, learningRate);
+	m_BiasOptimizer->Update(&m_Bias, &gradBiases, learningRate);
 
 	return Tensor3D(layerShape.InputRows, layerShape.InputCols, 1, std::move(gradCosts));
 }

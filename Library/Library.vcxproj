@@ -154,12 +154,14 @@
     <ClInclude Include="src\NeuralNetwork\DenseLayer.h" />
     <ClInclude Include="src\NeuralNetwork\ActivationF.h" />
     <ClInclude Include="src\NeuralNetwork\NearestUpsamplingLayer.h" />
+    <ClInclude Include="src\NeuralNetwork\Optimizer.h" />
     <ClInclude Include="src\NeuralNetwork\ReshapeLayer.h" />
     <ClInclude Include="src\NeuralNetwork\Initializer.h" />
     <ClInclude Include="src\NeuralNetwork\Layer.h" />
     <ClInclude Include="src\NeuralNetwork\MaxPoolingLayer.h" />
     <ClInclude Include="src\NeuralNetwork\Model.h" />
     <ClInclude Include="src\NeuralNetwork\SoftmaxLayer.h" />
+    <ClInclude Include="src\ThreadPool.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Math\Operation.cpp" />
@@ -173,6 +175,7 @@
     <ClCompile Include="src\NeuralNetwork\MaxPoolingLayer.cpp" />
     <ClCompile Include="src\NeuralNetwork\Model.cpp" />
     <ClCompile Include="src\NeuralNetwork\SoftmaxLayer.cpp" />
+    <ClCompile Include="src\ThreadPool.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

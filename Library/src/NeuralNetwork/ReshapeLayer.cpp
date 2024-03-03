@@ -37,8 +37,6 @@ Tensor3D ReshapeLayer::BackPropagation(const Tensor3D& inputs, const CostFunctio
 		m_InputDepth == inputs.GetDepth()
 		&& "Input shape not match!");
 
-	assert(NextLayer && "Missing next layer!");
-	
 	Tensor3D costs = NextLayer ? 
 		NextLayer->BackPropagation(Tensor3D(m_OutputHeight, m_OutputWidth, m_OutputDepth, inputs.GetData()),
 		costFucntion, learningRate, t) : costFucntion.DiffCost(Tensor3D(m_OutputHeight, m_OutputWidth, m_OutputDepth, inputs.GetData()));

@@ -31,12 +31,23 @@ int main(int argc, char* argv[])
 		std::cout << argv[i] << std::endl;
 	}
 
-	/*mogi::Tensor2D t1{  { 0.0f, 1.0f }, 
+	static const std::vector<mogi::Tensor2D> testVector =
+	{
+		{
+			{ 0.0f },
+			{ 0.0f }
+		},
+	};
+
+	std::cout << testVector[0].ToString() << std::endl;
+
+	mogi::Tensor2D t1{  { 0.0f, 1.0f }, 
 						{ 2.0f, 3.0f} };
 	mogi::Tensor2D t2{  { 0.0f, 1.0f }, 
 						{ 2.0f, 3.0f} };
 	mogi::Tensor2D res = mogi::MatrixMult(t1, t2);
-	std::cout << res.ToString() << std::endl;*/
+	//t1.ElementWise(t2, [](float v1, float v2) -> float { return v1 + v2; });
+	std::cout << res.ToString() << std::endl;
 
 	{
 		Timer t;
@@ -45,6 +56,7 @@ int main(int argc, char* argv[])
 			mogi::Tensor2D t1(128, 784, 1.0f);
 			mogi::Tensor2D t2(784, 1, -1.0f);
 			mogi::Tensor2D res = mogi::MatrixMult(t1, t2);
+			//t1.ElementWise(t2, [](float v1, float v2) -> float { return v1 + v2; });
 		}
 	}
 

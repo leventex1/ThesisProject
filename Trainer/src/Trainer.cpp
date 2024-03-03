@@ -50,7 +50,7 @@ void Trainer::Train(
 			mogi::CostFunction loss = m_CostFunctionFactory.Build(trainingSample.Label);
 			m_Model->BackPropagation(trainingSample.Input, loss, learningRate, t);
 
-			if (t % (m_TrainingDataset->GetEpochSize() / 100) == 0 || t == m_TrainingDataset->GetEpochSize() - 1)
+			if ((t % std::max(size_t(1), (m_TrainingDataset->GetEpochSize() / 100)) == 0) || (t == (m_TrainingDataset->GetEpochSize() - 1)))
 			{
 				float status = std::min((float)t / (float)(m_TrainingDataset->GetEpochSize() - 1), 1.0f);
 				size_t loadingStatus = status * loadingBarTotal;
