@@ -27,7 +27,7 @@ Tensor3D SoftmaxLayer::FeedForward(const Tensor3D& inputs)
 	return Map(inputs, [sum](float v) -> float { return exp(v) / sum; });
 }
 
-Tensor3D SoftmaxLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate)
+Tensor3D SoftmaxLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate, size_t t)
 {
 	assert(inputs.GetRows() == m_InputNodes &&
 		inputs.GetCols() == 1 &&
@@ -42,7 +42,7 @@ Tensor3D SoftmaxLayer::BackPropagation(const Tensor3D& inputs, const CostFunctio
 	Tensor3D output = Map(inputs, [sum](float v) -> float { return exp(v) / sum; });
 
 	Tensor3D costs = NextLayer ?
-								NextLayer->BackPropagation(output, costFunction, learningRate) :
+								NextLayer->BackPropagation(output, costFunction, learningRate, t) :
 								costFunction.DiffCost(output);
 
 	assert(costs.GetRows() == m_InputNodes &&

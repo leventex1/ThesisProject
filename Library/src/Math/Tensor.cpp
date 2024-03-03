@@ -2,6 +2,9 @@
 #include <assert.h>
 #include <sstream>
 
+#include <vector>
+#include <future>
+
 
 namespace_start
 
@@ -16,7 +19,8 @@ Tensor::Tensor(size_t size, float value)
 	: m_Data(nullptr)
 {
 	Alloc(size);
-	for (size_t i = 0; i < size; i++)
+
+	for (int i = 0; i < size; i++)
 	{
 		m_Data[i] = value;
 	}
@@ -26,7 +30,7 @@ Tensor::Tensor(size_t size, std::function<float()> initializer)
 	: m_Data(nullptr)
 {
 	Alloc(size);
-	for (size_t i = 0; i < size; i++)
+	for (int i = 0; i < size; i++)
 	{
 		m_Data[i] = initializer();
 	}
@@ -37,7 +41,7 @@ Tensor::Tensor(const Tensor& other)
 {
 	size_t size = other.GetSize();
 	Alloc(size);
-	for (size_t i = 0; i < size; i++)
+	for (int i = 0; i < size; i++)
 	{
 		size_t otherTrueIndex = other.TraverseTo(i);
 		m_Data[i] = other.m_Data[otherTrueIndex];
@@ -48,7 +52,7 @@ Tensor* Tensor::operator=(const Tensor& other)
 {
 	size_t size = other.GetSize();
 	Alloc(size);
-	for(size_t i = 0; i < size; i++)
+	for(int i = 0; i < size; i++)
 	{
 		size_t otherTrueIndex = other.TraverseTo(i);
 		m_Data[i] = other.m_Data[otherTrueIndex];
@@ -72,30 +76,79 @@ Tensor::Tensor(float* m_Watching)
 Tensor::Tensor(const float* data, size_t size)
 {
 	Alloc(size);
-	for (size_t i = 0; i < size; i++)
+	for (int i = 0; i < size; i++)
 	{
 		m_Data[i] = data[i];
 	}
 }
 
+void AsyncMap(int indexRange, int offset, Tensor* t, std::function<float(float v)> mapper)
+{
+	for (size_t i = 0; i < indexRange; i++)
+	{
+		size_t index = offset + i;
+		if (index >= t->GetSize())
+			break;
+		size_t trueIndex = t->TraverseTo(index);
+		t->GetData()[trueIndex] = mapper(t->GetData()[trueIndex]);
+	}
+}
+
 void Tensor::Map(std::function<float(float v)> mapper)
 {
-	for (size_t i = 0; i < GetSize(); i++)
+
+#ifdef ASYNC
+	const int numThreads = std::max(1u, std::thread::hardware_concurrency());
+	int indexRange = (GetSize() + numThreads - 1) / numThreads;
+	{
+		std::vector<std::future<void>> threads;
+
+		for (size_t i = 0; i < numThreads; i++)
+			threads.push_back(std::async(std::launch::async, AsyncMap, indexRange, i * indexRange, this, mapper));
+	}
+#else
+	for (int i = 0; i < GetSize(); i++)
 	{
 		size_t trueIndex = TraverseTo(i);
 		m_Data[trueIndex] = mapper(m_Data[trueIndex]);
+	}
+#endif // ASYNC
+}
+
+void AsyncElementWise(int indexRange, int offset, Tensor* v1, const Tensor* v2, std::function<float(float v1, float v2)> operation) 
+{
+	for (size_t i = 0; i < indexRange; i++)
+	{
+		size_t index = offset + i;
+		if (index >= v1->GetSize())
+			break;
+		size_t trueIndex = v1->TraverseTo(index);
+		size_t otherTrueIndex = v2->TraverseTo(index);
+		v1->GetData()[trueIndex] = operation(v1->GetData()[trueIndex], v2->GetData()[otherTrueIndex]);
 	}
 }
 
 void Tensor::ElementWise(const Tensor& other, std::function<float(float v1, float v2)> operation)
 {
 	assert(GetSize() == other.GetSize() && "Tensor sizes not match!");
-	for (size_t i = 0; i < GetSize(); i++)
+
+#ifdef ASYNC
+	const int numThreads = std::max(1u, std::thread::hardware_concurrency());
+	int indexRange = (GetSize() + numThreads - 1) / numThreads;
+	{
+		std::vector<std::future<void>> threads;
+
+		for(size_t i = 0; i < numThreads; i++)
+			threads.push_back(std::async(std::launch::async, AsyncElementWise, indexRange, i * indexRange, this, &other, operation));
+	}
+#else
+	for (int i = 0; i < GetSize(); i++)
 	{
 		size_t trueIndex = TraverseTo(i);
 		size_t otherTrueIndex = other.TraverseTo(i);
 		m_Data[trueIndex] = operation(m_Data[trueIndex], other.m_Data[otherTrueIndex]);
 	}
+#endif // ASYNC
 }
 
 float Tensor::GetAt(size_t i) const

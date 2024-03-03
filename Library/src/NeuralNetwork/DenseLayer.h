@@ -14,7 +14,7 @@ public:
 	DenseLayer(const std::string& fromString);
 
 	virtual Tensor3D FeedForward(const Tensor3D& inputs);
-	virtual Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate);
+	virtual Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate, size_t t);
 
 	virtual LayerShape GetLayerShape() const;
 
@@ -34,6 +34,15 @@ private:
 	Tensor2D m_Weights;
 	Tensor2D m_Bias;
 	ActivationFunciton m_ActivationFunction;
+
+	/*
+		Adam optimizer parameters.
+	*/
+	Tensor2D m_FirstMomentsWeights;
+	Tensor2D m_SecondMomentsWeights;
+	Tensor2D m_FirstMomentsBiases;
+	Tensor2D m_SecondMomentsBiases;
+	size_t m_TrainingTimeStep = 0;
 };
 
 namespace_end

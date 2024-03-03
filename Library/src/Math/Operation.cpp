@@ -3,6 +3,11 @@
 #include <random>
 #include <limits>
 
+#include <MogiAccelerator.h>
+
+#include <future>
+#include <mutex>
+
 
 namespace_start
 
@@ -154,11 +159,51 @@ Tensor2D Transpose(const Tensor2D& t)
 	return res;
 }
 
-Tensor2D MatrixMult(const Tensor2D& left, const Tensor2D& right)
+void AsyncMatrixtMult(int indexRangeRows, int indexRangeCols, int offsetRows, int offsetCols, Tensor2D* res, const Tensor2D* left, const Tensor2D* right)
 {
+	for (size_t i = 0; i < indexRangeRows; i++)
+	{
+		size_t row = offsetRows + i;
+		if (row >= res->GetRows())
+			continue;
+
+		for (size_t j = 0; j < indexRangeCols; j++)
+		{
+			size_t col = offsetCols + j;
+			if (col >= res->GetCols())
+				break;
+
+			float product = 0.0f;
+			for (size_t t = 0; t < left->GetCols(); t++)
+			{
+				product += left->GetAt(row, t) * right->GetAt(t, col);
+			}
+			res->SetAt(row, col, product);
+		}
+	}
+}
+
+Tensor2D MatrixMult(const Tensor2D& left, const Tensor2D& right, bool useCuda)
+{
+	if (useCuda)
+	{
+		return accelerator::MatrixMultCUDA(left, right);
+	}
+
 	assert(left.GetCols() == right.GetRows() && "Matrix params for matrix multiplication not math! Left.column != Right.rows");
 	Tensor2D res(left.GetRows(), right.GetCols());
 
+#ifdef ASYNC
+	const int numThreads = std::max(1u, std::thread::hardware_concurrency());
+	int indexRangeRows = (res.GetRows() + numThreads - 1) / numThreads;
+	int indexRangeCols = (res.GetCols() + numThreads - 1) / numThreads;
+	{
+		std::vector<std::future<void>> threads;
+		for (size_t i = 0; i < numThreads; i++)
+			for (size_t j = 0; j < numThreads; j++)
+			threads.push_back(std::async(std::launch::async, AsyncMatrixtMult, indexRangeRows, indexRangeCols, i * indexRangeRows, j * indexRangeCols, &res, &left, &right));
+	}
+#else
 	for (size_t row = 0; row < res.GetRows(); row++)
 	{
 		for (size_t col = 0; col < res.GetCols(); col++)
@@ -171,6 +216,7 @@ Tensor2D MatrixMult(const Tensor2D& left, const Tensor2D& right)
 			res.SetAt(row, col, product);
 		}
 	}
+#endif // ASYNC
 
 	return res;
 }

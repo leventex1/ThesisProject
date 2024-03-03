@@ -10,6 +10,7 @@
 #include "SoftmaxLayer.h"
 #include "ReshapeLayer.h"
 #include "MaxPoolingLayer.h"
+#include "NearestUpsamplingLayer.h"
 
 
 namespace_start
@@ -40,6 +41,7 @@ void Model::AddLayer(const std::string& layerName, const std::string& layerFromD
 	if (layerName == SoftmaxLayer::ClassName()) { AddLayer(std::make_shared<SoftmaxLayer>(layerFromData)); return; }
 	if (layerName == ReshapeLayer::ClassName()) { AddLayer(std::make_shared<ReshapeLayer>(layerFromData)); return; }
 	if (layerName == MaxPoolingLayer::ClassName()) { AddLayer(std::make_shared<MaxPoolingLayer>(layerFromData)); return; }
+	if (layerName == NearestUpsamplingLayer::ClassName()) { AddLayer(std::make_shared<NearestUpsamplingLayer>(layerFromData)); return; }
 
 	assert(false && "Unknown layer name!");
 }
@@ -60,11 +62,11 @@ Tensor3D Model::FeedForward(const Tensor3D& inputs) const
 	return output;
 }
 
-Tensor3D Model::BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate)
+Tensor3D Model::BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate, size_t t)
 {
 	assert(m_RootLayer != nullptr && "No layer available!");
 
-	return m_RootLayer->BackPropagation(inputs, costFunction, learningRate);
+	return m_RootLayer->BackPropagation(inputs, costFunction, learningRate, t);
 }
 
 void Model::Save(const std::string& filePath) const
@@ -162,11 +164,11 @@ void Model::Summarize() const
 
 		std::cout << std::left;
 		std::cout << std::setw(28) << (layer->GetName() + ": ");
-		std::cout << std::setw(24) << ("Input: (" + std::to_string(layerShape.InputRows) + ", " + std::to_string(layerShape.InputCols) + ", " + std::to_string(layerShape.InputDepth) + ")" + ", ");
-		std::cout << std::setw(24) << ("Output: (" + std::to_string(layerShape.OutputRows) + ", " + std::to_string(layerShape.OutputCols) + ", " + std::to_string(layerShape.OutputDepth) + ")" + ", ");
+		std::cout << std::setw(32) << ("Input: (" + std::to_string(layerShape.InputRows) + ", " + std::to_string(layerShape.InputCols) + ", " + std::to_string(layerShape.InputDepth) + ")" + ", ");
+		std::cout << std::setw(32) << ("Output: (" + std::to_string(layerShape.OutputRows) + ", " + std::to_string(layerShape.OutputCols) + ", " + std::to_string(layerShape.OutputDepth) + ")" + ", ");
 		std::cout << std::setw(32) << ("Activation: " + (activatin.Name.size() > 0 ? activatin.Name : "-") + " (" + (activatin.Params.size() > 0 ? activatin.Params : "-") + ")" + ", ");
 		std::cout << std::setw(28) << ("# Learnable params: " + std::to_string(layer->GetLearnableParams()) + ", ");
-		std::cout << std::setw(100) << ("Special: " + (special.size() > 0 ? special : "-"));
+		std::cout << std::setw(40) << ("Special: " + (special.size() > 0 ? special : "-"));
 		std::cout << std::endl << std::right;
 
 

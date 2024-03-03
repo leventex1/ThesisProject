@@ -15,7 +15,7 @@ public:
 	MaxPoolingLayer(const std::string& fromString);
 
 	virtual Tensor3D FeedForward(const Tensor3D& inputs);
-	virtual Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate);
+	virtual Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate, size_t t);
 
 	virtual LayerShape GetLayerShape() const;
 

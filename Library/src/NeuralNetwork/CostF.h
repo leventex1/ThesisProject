@@ -13,6 +13,7 @@ struct LIBRARY_API CostFunction
 {
 	std::function<float(const Tensor3D& output)> Cost;
 	std::function<Tensor3D(const Tensor3D& output)> DiffCost;
+
 };
 
 struct LIBRARY_API MeanSquareError : public CostFunction
@@ -34,7 +35,7 @@ struct LIBRARY_API MeanSquareError : public CostFunction
 				cost += diff * diff;
 			}
 
-			return cost;
+			return cost / (float)target.GetSize();
 		};
 
 		DiffCost = [target](const Tensor3D& output) -> Tensor3D {
@@ -45,7 +46,7 @@ struct LIBRARY_API MeanSquareError : public CostFunction
 
 			Tensor3D res = target;
 			res.Sub(output);
-			res.Map([](float v) -> float { return v * -2.0f; });
+			res.Map([&target](float v) -> float { return v * -2.0f / (float)target.GetSize(); });
 
 			return res;
 		};
@@ -89,6 +90,48 @@ struct LIBRARY_API CrossEntropyLoss : public CostFunction
 			res.Sub(target);
 			return res;
 		};
+	}
+};
+
+struct LIBRARY_API BinaryCrossEntropyLoss : public CostFunction
+{
+	BinaryCrossEntropyLoss(const Tensor3D& target)
+	{
+
+		Cost = [target](const Tensor3D& output) -> float
+			{
+
+				assert((output.GetDepth() == target.GetDepth() &&
+					output.GetRows() == target.GetRows() &&
+					output.GetCols() == target.GetCols()
+					) && "Number of parameters in the output and target must be the same!");
+
+				float cost = 0.0f;
+
+				for (size_t t = 0; t < target.GetSize(); t++)
+				{
+					// TODO: log(0) -> Nan!
+					float pred = output.GetData()[t];
+					float tar = target.GetData()[t];
+					cost += tar * log(pred) + (1.0f - tar) * log(1.0f - pred);
+				}
+
+				return -1.0f * cost / target.GetSize();
+			};
+
+		DiffCost = [target](const Tensor3D& output) -> Tensor3D
+			{
+				assert((output.GetDepth() == target.GetDepth() &&
+					output.GetRows() == target.GetRows() &&
+					output.GetCols() == target.GetCols()
+					) && "Number of parameters in the output and target must be the same!");
+
+				Tensor3D res = target;
+				res.ElementWise(output, [&target](float t, float p) -> float {
+					return -1.0f * ((t / p) - ((1 - t) / (1 - p))) / (float)target.GetSize();
+				});
+				return res;
+			};
 	}
 };
 

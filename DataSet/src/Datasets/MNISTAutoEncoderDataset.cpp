@@ -66,10 +66,11 @@ SampleShape MNISTAutoEncoderDataset::GetSampleShape() const
 
 Sample MNISTAutoEncoderDataset::GetSample() const
 {
+	SampleShape s = GetSampleShape();
 	return
 	{
-		Tensor3D(28, 28, 1, (float*)m_Images[m_SampleIndex].GetData()),
-		Tensor3D(28, 28, 1, (float*)m_Images[m_SampleIndex].GetData())
+		Tensor3D(s.InputRows, s.InputCols, s.InputDepth, (float*)m_Images[m_SampleIndex].GetData()),
+		Tensor3D(s.LabelRows, s.LabelCols, s.LabelDepth, (float*)m_Images[m_SampleIndex].GetData())
 	};
 }
 
@@ -82,7 +83,7 @@ void MNISTAutoEncoderDataset::Shuffle()
 {
 	std::random_device rd;
 
-	for (size_t i = 0; i < 4; i++)
+	for (size_t i = 0; i < m_Images.size(); i++)
 	{
 		size_t swapIndex = rd() % m_EpochSize;
 		std::swap(m_Images[i], m_Images[swapIndex]);

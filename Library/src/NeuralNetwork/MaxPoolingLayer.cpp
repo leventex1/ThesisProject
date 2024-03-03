@@ -47,7 +47,7 @@ Tensor3D MaxPoolingLayer::FeedForward(const Tensor3D& inputs)
 	return output;
 }
 
-Tensor3D MaxPoolingLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFucntion, float learningRate)
+Tensor3D MaxPoolingLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFucntion, float learningRate, size_t t)
 {
 	assert(m_InputHeight == inputs.GetRows() &&
 		m_InputWidth == inputs.GetCols() &&
@@ -75,7 +75,7 @@ Tensor3D MaxPoolingLayer::BackPropagation(const Tensor3D& inputs, const CostFunc
 	}
 
 	Tensor3D costs = NextLayer ?
-								NextLayer->BackPropagation(output, costFucntion, learningRate) :
+								NextLayer->BackPropagation(output, costFucntion, learningRate, t) :
 								output;
 
 	assert(layerShape.OutputRows == costs.GetRows() &&

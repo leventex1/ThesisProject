@@ -7,11 +7,17 @@
 
 namespace_start
 
-DenseLayer::DenseLayer(size_t inputNodes, size_t outpuNodes, ActivationFunciton activationFunction)
+DenseLayer::DenseLayer(size_t inputNodes, size_t outputNodes, ActivationFunciton activationFunction)
 	: m_ActivationFunction(activationFunction)
 {
-	m_Weights = Random2D(outpuNodes, inputNodes, -1.0f, 1.0f);
-	m_Bias = Random2D(outpuNodes, 1, -1.0f, 1.0f);
+	m_Weights = Random2D(outputNodes, inputNodes, -1.0f, 1.0f);
+	m_Bias = Random2D(outputNodes, 1, -1.0f, 1.0f);
+
+	m_FirstMomentsWeights = Tensor2D(outputNodes, inputNodes);
+	m_SecondMomentsWeights = Tensor2D(outputNodes, inputNodes);
+	m_FirstMomentsBiases = Tensor2D(outputNodes, 1);
+	m_SecondMomentsBiases = Tensor2D(outputNodes, 1);
+	m_TrainingTimeStep = 0;
 }
 
 DenseLayer::DenseLayer(size_t inputNodes, size_t outputNodes, ActivationFunciton activationFunction, Initializer initializer)
@@ -19,6 +25,12 @@ DenseLayer::DenseLayer(size_t inputNodes, size_t outputNodes, ActivationFunciton
 {
 	m_Weights = Tensor2D(outputNodes, inputNodes, initializer.Init);
 	m_Bias = Tensor2D(outputNodes, 1, initializer.Init);
+
+	m_FirstMomentsWeights = Tensor2D(outputNodes, inputNodes);
+	m_SecondMomentsWeights = Tensor2D(outputNodes, inputNodes);
+	m_FirstMomentsBiases = Tensor2D(outputNodes, 1);
+	m_SecondMomentsBiases = Tensor2D(outputNodes, 1);
+	m_TrainingTimeStep = 0;
 }
 
 DenseLayer::DenseLayer(const std::string& fromString)
@@ -40,10 +52,9 @@ Tensor3D DenseLayer::FeedForward(const Tensor3D& inputs)
 	return Tensor3D(sum.GetRows(), sum.GetCols(), 1, std::move(sum));
 }
 
-Tensor3D DenseLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate)
+Tensor3D DenseLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate, size_t t)
 {
 	//assert(inputs.size() >= 1 && "Got no input!");
-	//assert(inputs.size() >= 1 && "Dense layer's input is 1 Tensor2D!");
 	assert(inputs.GetDepth() == 1 && "Dense layer's input should contain a tensor with a depth of 1!");
 	assert(inputs.GetCols() == 1 && "Dense layer's input should contain 1 column!");
 	assert(inputs.GetRows() == m_Weights.GetCols() && "Dense layer's input should contain as many rows as the weight's cols!");
@@ -59,7 +70,7 @@ Tensor3D DenseLayer::BackPropagation(const Tensor3D& inputs, const CostFunction&
 	Tensor3D output = Tensor3D(layerShape.OutputRows, layerShape.OutputCols, 1, std::move(Map(sum, m_ActivationFunction.Activation)));
 
 	Tensor3D costs = NextLayer ? 
-								NextLayer->BackPropagation(output, costFunction, learningRate) : 
+								NextLayer->BackPropagation(output, costFunction, learningRate, t) : 
 								costFunction.DiffCost(output);
 
 	//assert(costs.size() == 1 && "Dense layer's cost is 1 Tensor2D");
@@ -75,8 +86,26 @@ Tensor3D DenseLayer::BackPropagation(const Tensor3D& inputs, const CostFunction&
 	Tensor2D& gradBiases = diffSum;
 	Tensor2D gradCosts = MatrixMultLeftTranspose(m_Weights, diffSum);
 
-	gradWeights.Map([learningRate](float v) -> float { return learningRate * v; });
-	gradBiases.Map([learningRate](float v) -> float { return learningRate * v; });
+	m_TrainingTimeStep++;
+	const float b1 = 0.9f;
+	const float b2 = 0.999f;
+	const float e = 1.0f / 100000000;
+	size_t timeStep = m_TrainingTimeStep;
+
+	m_FirstMomentsWeights.ElementWise(gradWeights, [b1](float m, float g) -> float { return b1 * m + (1.0f - b1) * g; });
+	m_SecondMomentsWeights.ElementWise(gradWeights, [b2](float v, float g) -> float { return b2 * v + (1.0f - b2) * g * g; });
+	m_FirstMomentsBiases.ElementWise(gradBiases, [b1](float m, float g) -> float { return b1 * m + (1.0f - b1) * g; });
+	m_SecondMomentsBiases.ElementWise(gradBiases, [b2](float v, float g) -> float { return b2 * v + (1.0f - b2) * g * g; });
+
+	Tensor2D correctedFirstMomentsWeigts = Map(m_FirstMomentsWeights, [b1, timeStep](float v) -> float { return v / (1.0f - std::pow(b1, timeStep)); });
+	Tensor2D correctedSecondMomentsWeigts = Map(m_SecondMomentsWeights, [b2, timeStep](float v) -> float { return v / (1.0f - std::pow(b2, timeStep)); });
+	Tensor2D correctedFirstMomentsBiases = Map(m_FirstMomentsBiases, [b1, timeStep](float v) -> float { return v / (1.0f - std::pow(b1, timeStep)); });
+	Tensor2D correctedSecondMomentsBiases = Map(m_SecondMomentsWeights, [b2, timeStep](float v) -> float { return v / (1.0f - std::pow(b2, timeStep)); });
+
+	gradWeights.ElementWise(correctedFirstMomentsWeigts, [learningRate](float v1, float m) -> float { return learningRate * m; });
+	gradWeights.ElementWise(correctedSecondMomentsWeigts, [e](float v1, float v) -> float { return v1 / (sqrt(v) + e); });
+	gradBiases.ElementWise(correctedFirstMomentsBiases, [learningRate](float v1, float m) -> float { return learningRate * m; });
+	gradBiases.ElementWise(correctedSecondMomentsBiases, [e](float v1, float v) -> float { return v1 / (sqrt(v) + e); });
 
 	m_Weights.Sub(gradWeights);
 	m_Bias.Sub(gradBiases);
@@ -187,5 +216,58 @@ std::string DenseLayer::Summarize() const
 
 	return ss.str();
 }
+
+//
+//std::vector<Tensor3D> DenseLayer::BackPropagation(const std::vector<Tensor3D>& inputs, const CostFunction& costFunction, float learningRate)
+//{
+//	assert(inputs.size() >= 1 && "No input!");
+//
+//	LayerShape shape = GetLayerShape();
+//
+//	std::vector<Tensor3D> sums(inputs.size());
+//	for (size_t t = 0; t < inputs.size(); t++)
+//	{
+//		sums.emplace_back(Tensor3D(shape.OutputRows, shape.OutputCols, shape.OutputDepth,
+//			std::move(MatrixMult(m_Weights, CreateWatcher((Tensor3D&)inputs[t], 0)).Add(m_Bias))
+//		));
+//	}
+//
+//	std::vector<Tensor3D> outputs(inputs.size());
+//	for (size_t t = 0; t < inputs.size(); t++)
+//		outputs.emplace_back(Tensor3D(shape.OutputRows, shape.OutputCols, shape.OutputDepth, std::move(Map(sums[t], m_ActivationFunction.Activation))));
+//
+//	std::vector<Tensor3D> costs = NextLayer ? NextLayer->BackPropagation(outputs, costFunction, learningRate) : std::vector<Tensor3D>(inputs.size());
+//	if (!NextLayer)
+//		for (size_t t = 0; t < inputs.size(); t++)
+//			costs.emplace_back(costFunction.DiffCost(outputs[t]));
+//
+//	for (size_t t = 0; t < inputs.size(); t++)
+//	{
+//		auto diffA = m_ActivationFunction.DiffActivation;
+//		sums[t].ElementWise(costs[t], [diffA](float v1, float v2) -> float {
+//			return v2 * diffA(v1);
+//			});
+//	}
+//
+//	Tensor2D gradWeights(m_Weights.GetRows(), m_Weights.GetCols());
+//	Tensor2D gradBias(m_Bias.GetRows(), m_Bias.GetCols());
+//	std::vector<Tensor3D> gradCosts(inputs.size());
+//	for (size_t t = 0; t < inputs.size(); t++)
+//	{
+//		gradWeights.Add(MatrixMultRightTranspose(CreateWatcher(sums[t], 0), CreateWatcher((Tensor3D&)inputs[t], 0)));
+//		gradWeights.Add(sums[t]);
+//		gradCosts.emplace_back(MatrixMultLeftTranspose(m_Weights, CreateWatcher(sums[t], 0)));
+//	}
+//
+//	size_t size = inputs.size();
+//	gradWeights.Map([learningRate, size](float v) -> float { return learningRate * v / (float)size; });
+//	gradBias.Map([learningRate, size](float v) -> float { return learningRate * v / (float)size; });
+//
+//	m_Weights.Sub(gradWeights);
+//	m_Bias.Sub(gradBias);
+//
+//	return gradCosts;
+//}
+
 
 namespace_end

@@ -25,7 +25,7 @@ public:
 	void AddLayer(const std::string& layerName, const std::string& layerFromData);
 
 	Tensor3D FeedForward(const Tensor3D& inputs) const;
-	Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate);
+	Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate, size_t t);
 
 	void Save(const std::string& filePath) const;
 	void Load(const std::string& filePath);

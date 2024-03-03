@@ -42,13 +42,13 @@ void Trainer::Train(
 		std::cout << "[" << std::string(loadingBarTotal, ' ') << "] " << std::setw(4) << "0%";
 
 		Timer timer;
-		for (size_t t = 0; t < m_TrainingDataset->GetEpochSize(); t++)
+		for (size_t t = 0; t < m_TrainingDataset->GetEpochSize(); t += 1)
 		{
 			mogi::dataset::Sample trainingSample = m_TrainingDataset->GetSample();
 			m_TrainingDataset->Next();
 
 			mogi::CostFunction loss = m_CostFunctionFactory.Build(trainingSample.Label);
-			m_Model->BackPropagation(trainingSample.Input, loss, learningRate);
+			m_Model->BackPropagation(trainingSample.Input, loss, learningRate, t);
 
 			if (t % (m_TrainingDataset->GetEpochSize() / 100) == 0 || t == m_TrainingDataset->GetEpochSize() - 1)
 			{

@@ -1,12 +1,10 @@
 #pragma once
 
-#define ASYNC
-
-#define namespace_start namespace mogi {
-#define namespace_end }
+#define namespace_accelerator_start namespace mogi { namespace accelerator {
+#define namespace_accelerator_end } }
 
 // For the dll build define EXPORT_LIBRARY
-#ifdef EXPORT_LIBRARY
+#ifdef EXPORT_ACCELERATOR_LIBRARY
 #define LIBRARY_API __declspec(dllexport)
 #else
 #define LIBRARY_API __declspec(dllimport)

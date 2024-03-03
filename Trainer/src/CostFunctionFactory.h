@@ -6,7 +6,8 @@
 enum CostFunctionType
 {
 	MeanSuareError = 0,
-	CrossEntropyLoss
+	CrossEntropyLoss,
+	BinaryCrossEntropyLoss
 };
 
 
@@ -19,8 +20,9 @@ public:
 	{
 		switch (m_Type)	
 		{
-		case MeanSuareError:		return mogi::MeanSquareError(label);
-		case CrossEntropyLoss:		return mogi::CrossEntropyLoss(label);
+		case MeanSuareError:			return mogi::MeanSquareError(label);
+		case CrossEntropyLoss:			return mogi::CrossEntropyLoss(label);
+		case BinaryCrossEntropyLoss:	return mogi::BinaryCrossEntropyLoss(label);
 		default:
 			break;
 		}

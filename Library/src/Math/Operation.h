@@ -28,7 +28,7 @@ LIBRARY_API std::pair<size_t, size_t> MaxPos(const Tensor2D& tensor);
 
 LIBRARY_API Tensor2D Transpose(const Tensor2D& t);
 
-LIBRARY_API Tensor2D MatrixMult(const Tensor2D& left, const Tensor2D& right);
+LIBRARY_API Tensor2D MatrixMult(const Tensor2D& left, const Tensor2D& right, bool useCuda=false);
 // Calculates the matrix multiplication, but take the left matrix as a transpose matrix without extra calculation.
 LIBRARY_API Tensor2D MatrixMultLeftTranspose(const Tensor2D& left, const Tensor2D& right);
 // Calculates the matrix multiplication, but take the right matrix as a transpose matrix without extra calculation.

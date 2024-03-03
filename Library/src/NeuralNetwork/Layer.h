@@ -32,9 +32,11 @@ public:
 
 		Returns the derivated cost respect to the inputs.
 
+		t: learning time step.
+
 		TODO: implement bacch gradient descent.
 	*/
-	virtual Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate) = 0;
+	virtual Tensor3D BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate, size_t t) = 0;
 
 	virtual LayerShape GetLayerShape() const = 0;
 

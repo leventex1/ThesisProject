@@ -30,7 +30,7 @@ Tensor3D ReshapeLayer::FeedForward(const Tensor3D& inputs)
 	return Tensor3D(m_OutputHeight, m_OutputWidth, m_OutputDepth, inputs.GetData());
 }
 
-Tensor3D ReshapeLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFucntion, float learningRate)
+Tensor3D ReshapeLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFucntion, float learningRate, size_t t)
 {
 	assert(m_InputHeight == inputs.GetRows() &&
 		m_InputWidth == inputs.GetCols() &&
@@ -39,9 +39,9 @@ Tensor3D ReshapeLayer::BackPropagation(const Tensor3D& inputs, const CostFunctio
 
 	assert(NextLayer && "Missing next layer!");
 	
-	Tensor3D costs = NextLayer->BackPropagation(
-		Tensor3D(m_OutputHeight, m_OutputWidth, m_OutputDepth, inputs.GetData()),
-		costFucntion, learningRate);
+	Tensor3D costs = NextLayer ? 
+		NextLayer->BackPropagation(Tensor3D(m_OutputHeight, m_OutputWidth, m_OutputDepth, inputs.GetData()),
+		costFucntion, learningRate, t) : costFucntion.DiffCost(Tensor3D(m_OutputHeight, m_OutputWidth, m_OutputDepth, inputs.GetData()));
 	
 	return Tensor3D(m_InputHeight, m_InputWidth, m_InputDepth, std::move(costs));
 }

@@ -40,7 +40,7 @@ Tensor3D ConvolutionalLayer::FeedForward(const Tensor3D& inputs)
 
 	Tensor3D output = Tensor3D(layerShape.OutputRows, layerShape.OutputCols, layerShape.OutputDepth);
 
-	for (size_t d = 0; d < layerShape.OutputDepth; d++)
+	for (int d = 0; d < layerShape.OutputDepth; d++)
 	{
 		Tensor3D kernelBlock = CreateWatcher(m_Kernels, d * layerShape.InputDepth, layerShape.InputDepth);
 		Tensor2D outputSlice = CreateWatcher(output, d);
@@ -50,12 +50,12 @@ Tensor3D ConvolutionalLayer::FeedForward(const Tensor3D& inputs)
 	if (m_IsUseBias)
 	{
 		output.Add(m_Bias);
-	}
+	} 
 	output.Map(m_ActivationFunction.Activation);
 	return output;
 }
 
-Tensor3D ConvolutionalLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate)
+Tensor3D ConvolutionalLayer::BackPropagation(const Tensor3D& inputs, const CostFunction& costFunction, float learningRate, size_t t)
 {
 	assert(inputs.GetRows() == m_InputHeight && inputs.GetCols() == m_InputWidth && inputs.GetDepth() == m_InputDepth
 		&& "Invalid input shape!");
@@ -64,7 +64,7 @@ Tensor3D ConvolutionalLayer::BackPropagation(const Tensor3D& inputs, const CostF
 	
 	Tensor3D filterMap = Tensor3D(layerShape.OutputRows, layerShape.OutputCols, layerShape.OutputDepth);
 
-	for (size_t d = 0; d < layerShape.OutputDepth; d++)
+	for (int d = 0; d < layerShape.OutputDepth; d++)
 	{
 		Tensor3D kernelBlock = CreateWatcher(m_Kernels, d * layerShape.InputDepth, layerShape.InputDepth);
 		Tensor2D outputSlice = CreateWatcher(filterMap, d);
@@ -78,7 +78,7 @@ Tensor3D ConvolutionalLayer::BackPropagation(const Tensor3D& inputs, const CostF
 	Tensor3D output = Map(filterMap, m_ActivationFunction.Activation);
 
 	Tensor3D costs = NextLayer ?
-								NextLayer->BackPropagation(output, costFunction, learningRate) :
+								NextLayer->BackPropagation(output, costFunction, learningRate, t) :
 								costFunction.DiffCost(output);
 
 	assert(costs.GetRows() == layerShape.OutputRows && costs.GetCols() == layerShape.OutputCols && costs.GetDepth() == layerShape.OutputDepth
@@ -122,10 +122,13 @@ Tensor3D ConvolutionalLayer::BackPropagation(const Tensor3D& inputs, const CostF
 
 LayerShape ConvolutionalLayer::GetLayerShape() const
 {
+	size_t outputHeight = CalcConvSize(m_InputHeight, m_Kernels.GetRows(), 1, m_Padding);
+	size_t outputWidth = CalcConvSize(m_InputWidth, m_Kernels.GetCols(), 1, m_Padding);
+
 	return
 	{
 		m_InputHeight, m_InputWidth, m_InputDepth,
-		m_Bias.GetRows(), m_Bias.GetCols(), m_NumKernels
+		outputHeight, outputWidth, m_NumKernels
 	};
 }
 
