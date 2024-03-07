@@ -4,6 +4,8 @@
 #include <Mogi.h>
 #include <MogiDataset.h>
 
+#include <opencv2/opencv.hpp>
+
 class Timer {
 public:
 	Timer() {
@@ -31,32 +33,30 @@ int main(int argc, char* argv[])
 		std::cout << argv[i] << std::endl;
 	}
 
-	static const std::vector<mogi::Tensor2D> testVector =
+	int index = 1;
+
+	while (true)
 	{
+		std::string filePath = "images/image_" + std::to_string(index) + ".jpg";
+
+		cv::Mat image = cv::imread(filePath, cv::IMREAD_COLOR);
+
+		if (image.empty())
 		{
-			{ 0.0f },
-			{ 0.0f }
-		},
-	};
+			std::cerr << "Could not open file at: " << filePath << std::endl;
+			return -1;
+		}
 
-	std::cout << testVector[0].ToString() << std::endl;
+		cv::namedWindow("Display window", cv::WINDOW_AUTOSIZE);
 
-	mogi::Tensor2D t1{  { 0.0f, 1.0f }, 
-						{ 2.0f, 3.0f} };
-	mogi::Tensor2D t2{  { 0.0f, 1.0f }, 
-						{ 2.0f, 3.0f} };
-	mogi::Tensor2D res = mogi::MatrixMult(t1, t2);
-	//t1.ElementWise(t2, [](float v1, float v2) -> float { return v1 + v2; });
-	std::cout << res.ToString() << std::endl;
+		cv::imshow("Display window", image);
 
-	{
-		Timer t;
-		for (size_t t = 0; t < 100; t++)
+		index++;
+		int key = cv::waitKey(0);
+
+		if (key == 27)
 		{
-			mogi::Tensor2D t1(128, 784, 1.0f);
-			mogi::Tensor2D t2(784, 1, -1.0f);
-			mogi::Tensor2D res = mogi::MatrixMult(t1, t2);
-			//t1.ElementWise(t2, [](float v1, float v2) -> float { return v1 + v2; });
+			break;
 		}
 	}
 

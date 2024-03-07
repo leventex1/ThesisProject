@@ -30,7 +30,7 @@ public:
 
 	virtual ActivationFunciton GetActivationFunction() const override { return m_ActivationFunction; }
 	virtual size_t GetLearnableParams() const override { return m_Kernels.GetSize() + (m_IsUseBias ? m_Bias.GetSize() : 0); };
-	virtual std::string GetSepcialParams() const override { return "Kernel: (" + std::to_string(m_Kernels.GetRows()) + ", " + std::to_string(m_Kernels.GetCols()) + ", " + std::to_string(m_InputDepth) + " * " + std::to_string(m_NumKernels) + "), Padding: " + std::to_string(m_Padding) + ", Stride: 1"; };
+	virtual std::string GetSepcialParams() const override { return "Kernel: (" + std::to_string(m_Kernels.GetRows()) + ", " + std::to_string(m_Kernels.GetCols()) + ", " + std::to_string(m_InputDepth) + " * " + std::to_string(m_NumKernels) + "), Padding: " + std::to_string(m_Padding) + ", Stride: 1, Optimizer: " + m_KernelOptimizer->GetName(); };
 
 	virtual void FromString(const std::string& data) override;
 
@@ -39,7 +39,7 @@ private:
 	Tensor3D m_Kernels;  // k x k x (#2Dinputs * n)
 	Tensor3D m_Bias;  // Wo x Ho x n
 	ActivationFunciton m_ActivationFunction;
-
+	 
 	size_t m_InputWidth, m_InputHeight, m_InputDepth;
 	size_t m_NumKernels;
 	size_t m_Padding;

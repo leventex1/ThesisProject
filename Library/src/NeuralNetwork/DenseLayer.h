@@ -26,7 +26,7 @@ public:
 
 	virtual ActivationFunciton GetActivationFunction() const override { return m_ActivationFunction; }
 	virtual size_t GetLearnableParams() const override { return m_Weights.GetSize() + m_Bias.GetSize(); };
-	virtual std::string GetSepcialParams() const override { return ""; };
+	virtual std::string GetSepcialParams() const override { return ("Optimizer: " + m_WeightsOptimizer->GetName()); };
 
 	virtual void FromString(const std::string& data) override;
 

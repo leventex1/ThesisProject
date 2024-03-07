@@ -54,14 +54,12 @@ Tensor2D::Tensor2D(size_t rows, size_t cols, const float* data)
 float Tensor2D::GetAt(size_t row, size_t col) const
 {
 	size_t index = CalculateIndex(row, col);
-	assert(index < GetSize());
 	return Tensor::GetAt(index);
 }
 
 void Tensor2D::SetAt(size_t row, size_t col, float value)
 {
 	size_t index = CalculateIndex(row, col);
-	assert(index < GetSize());
 	Tensor::SetAt(index, value);
 }
 

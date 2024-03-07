@@ -156,6 +156,10 @@ std::string ConvolutionalLayer::ToString() const
 		}
 	}
 
+	ss << " { " << m_KernelOptimizer->GetName() << " " << m_KernelOptimizer->ToString() << "}";
+	if(m_IsUseBias)
+		ss << " { " << m_BiasOptimizer->GetName() << " " << m_BiasOptimizer->ToString() << "}";
+
 	return ss.str();
 }
 
@@ -176,15 +180,8 @@ void ConvolutionalLayer::FromString(const std::string& data)
 	size_t kernelHeight, kernelWidth;
 	std::string activationName;
 
-	try
-	{
-		ss >> m_InputWidth >> m_InputHeight >> m_InputDepth >> kernelHeight >> kernelWidth >> m_NumKernels >> m_Padding >> m_IsUseBias;
-		ss >> activationName;
-	}
-	catch (...)
-	{
-		assert(false && "Invalid number.");
-	}
+	ss >> m_InputWidth >> m_InputHeight >> m_InputDepth >> kernelHeight >> kernelWidth >> m_NumKernels >> m_Padding >> m_IsUseBias;
+	ss >> activationName;
 
 	size_t kernelDepth = m_NumKernels * m_InputDepth;
 	size_t outputHeight = CalcConvSize(m_InputHeight, kernelHeight, 1, m_Padding);
@@ -206,6 +203,23 @@ void ConvolutionalLayer::FromString(const std::string& data)
 		{
 			iss >> m_Bias.GetData()[t];
 		}
+	}
+
+	std::string remaining;
+	std::getline(iss, remaining);
+
+	size_t kernelOptimizerStart = remaining.find('{');
+	size_t kernelOptimizerEnd = remaining.find('}');
+	size_t biasOptimizerStart = remaining.find('{', kernelOptimizerEnd);
+	size_t biasOptimizerEnd = remaining.find('}', biasOptimizerStart);
+
+	OptimizerFactory optimizerFactory;
+	std::string kernelOptimizerStr = remaining.substr(kernelOptimizerStart + 1, kernelOptimizerEnd - kernelOptimizerStart - 2);
+	m_KernelOptimizer = optimizerFactory.Get(kernelOptimizerStr);
+	if (m_IsUseBias)
+	{
+		std::string biasOptimizerStr = remaining.substr(biasOptimizerStart + 1, biasOptimizerEnd - biasOptimizerStart - 2);
+		m_BiasOptimizer = optimizerFactory.Get(biasOptimizerStr);
 	}
 }
 

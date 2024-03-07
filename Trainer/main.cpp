@@ -14,13 +14,8 @@ int main(int argc, char* argv[])
 		std::cout << argv[i] << std::endl;
 	}
 
+	mogi::Model myModel("MNIST_Conv_AutoEncoder_Adam_Test_01.txt");
 
-	mogi::Model myModel;
-	myModel.AddLayer(std::make_shared<mogi::ReshapeLayer>(28, 28, 1, 784, 1, 1));
-	myModel.AddLayer(std::make_shared<mogi::DenseLayer>(784, 64, mogi::RelU(), mogi::He(784)));
-	myModel.AddLayer(std::make_shared<mogi::DenseLayer>(64, 784, mogi::Sigmoid(), mogi::Xavier(64, 784)));
-	myModel.AddLayer(std::make_shared<mogi::ReshapeLayer>(784, 1, 1, 28, 28, 1));
-	myModel.InitializeOptimizer(mogi::OptimizerFactory(mogi::OptimizerType::Adam));
 	myModel.Summarize();
 
 	//mogi::dataset::MNISTDataset testingDataset("Datasets/MNIST/t10k-images.idx3-ubyte", "Datasets/MNIST/t10k-labels.idx1-ubyte");
@@ -34,13 +29,12 @@ int main(int argc, char* argv[])
 	float cost = trainer.Validate();
 	std::cout << "Average cost before training: " << cost << std::endl;
 
-	trainer.Train(1, 0.01f, 0.01f);	
+	trainer.Train(1, 0.001f, 0.001f);	
 	 
-	//myModel.Save("MNIST_Dense_AutoEncoder_Test_06.txt");
+	myModel.Save("MNIST_Conv_AutoEncoder_Adam_Test_01-01.txt");
 
 
-
-	//mogi::Model myModel("MNIST_Conv_AutoEncoder_Test_05.txt");
+	//mogi::Model myModel("MNIST_Conv_AutoEncoder_Adam_Test_01-02.txt");
 
 	//std::cout << "AutoEncoder: " << std::endl;
 	//myModel.Summarize();
@@ -49,7 +43,7 @@ int main(int argc, char* argv[])
 	//mogi::Model encoder;
 	//mogi::Model decoder;
 
-	//int decoderIndex = 2;
+	//int decoderIndex = 6;
 
 	//auto root = myModel.GetLayer(0);
 	//auto bottleNeck = myModel.GetLayer(decoderIndex);
@@ -58,32 +52,37 @@ int main(int argc, char* argv[])
 	//encoder.AddLayer(root);
 	//encoder.GetLayer(decoderIndex - 1)->NextLayer = nullptr;
 
-	////std::cout << "Encoder: " << std::endl;
-	////encoder.Summarize();
-	////std::cout << "Decoder: " << std::endl;
-	////decoder.Summarize();
+	//std::cout << "Encoder: " << std::endl;
+	//encoder.Summarize();
+	//std::cout << "Decoder: " << std::endl;
+	//decoder.Summarize();
 
-	////mogi::dataset::MNISTAutoEncoderDataset testingDataset("Datasets/MNIST/t10k-images.idx3-ubyte");
+	//mogi::dataset::MNISTAutoEncoderDataset testingDataset("Datasets/MNIST/t10k-images.idx3-ubyte");
+
+	//mogi::dataset::Sample sample = testingDataset.GetSample();
+	//testingDataset.Display();
+	//std::cout << "------------------- |^ Original ^| -------------------" << std::endl;
+
+
+	//mogi::Tensor3D latenCoord = encoder.FeedForward(sample.Input);
 
 	//for (size_t i = 0; i < 10; i++)
 	//{
-	//	mogi::dataset::Sample sample = testingDataset.GetSample();
+	//	/*mogi::dataset::Sample sample = testingDataset.GetSample();
 	//	testingDataset.Display();
 
-	//	//mogi::Tensor3D input = mogi::Tensor3D(28 * 28, 1, 1, sample.Input.GetData());
-	//	mogi::Tensor3D& input = sample.Input;
+	//	mogi::Tensor3D& input = sample.Input;*/
 
-	//	mogi::Tensor3D latenOutput = encoder.FeedForward(input);
+	//	mogi::Tensor3D latenOutput = latenCoord; //encoder.FeedForward(input);
+	//	latenOutput.Add(mogi::Random3D(32, 1, 1, -2.0f, 2.0f));
 	//	mogi::Tensor3D output = decoder.FeedForward(latenOutput);
 
-	//	//mogi::Tensor3D outputT = mogi::Tensor3D(28, 28, 1, output.GetData());
-	//	mogi::Tensor3D& outputT = output;
 
 	//	std::cout << "Laten coord: " << latenOutput.ToString() << std::endl;
-	//	mogi::dataset::MNISTAutoEncoderDataset::Display(mogi::CreateWatcher(outputT, 0));
+	//	mogi::dataset::MNISTAutoEncoderDataset::Display(mogi::CreateWatcher(output, 0));
 	//	std::cout << "-------------------" << std::endl;
 
-	//	testingDataset.Next();
+	//	//testingDataset.Next();
 	//}
 
 	return 0;

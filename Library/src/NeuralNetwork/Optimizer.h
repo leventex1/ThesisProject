@@ -1,4 +1,5 @@
 #pragma once
+#include <sstream>
 #include <math.h>
 #include <memory>
 #include <string>
@@ -12,7 +13,8 @@ namespace_start
 
 enum OptimizerType
 {
-	SGD=0, Adam,
+	None=-1,
+	SGD, Adam,
 };
 
 
@@ -33,13 +35,20 @@ class SGDOptimizer : public Optimizer
 {
 public:
 	SGDOptimizer(size_t numParams) { }
+	SGDOptimizer(const std::string& fromString) { FromString(fromString); }
 	virtual std::string GetName() const override { return "SGDOptimizer"; }
 	virtual void Update(Tensor* params, Tensor* gradient, float learningRate) override
 	{
 		params->ElementWise(*gradient, [learningRate](float p, float g) -> float { return p - learningRate * g; });
 	}
-	virtual std::string ToString() const override { return ""; }
+	virtual std::string ToString() const override 
+	{ 
+		std::stringstream ss;
+		ss << GetName() << " ";
+		return ss.str(); 
+	}
 	virtual void FromString(const std::string& fromString) override { }
+	static std::string ClassName() { return "SGDOptimizer"; }
 };
 
 
@@ -47,6 +56,7 @@ class AdamOptimizer : public Optimizer
 {
 public:
 	AdamOptimizer(size_t numParams) : m_TrainingTimeStep(1), m_FirstMoments(numParams, 1), m_SecondMoments(numParams, 1) { }
+	AdamOptimizer(const std::string& fromString) { FromString(fromString); }
 	virtual std::string GetName() const override { return "AdamOptimizer"; }
 	virtual void Update(Tensor* params, Tensor* gradient, float learningRate) override
 	{
@@ -67,8 +77,30 @@ public:
 		params->Sub(correctedGradient);
 		m_TrainingTimeStep++;
 	}
-	virtual std::string ToString() const override { return ""; }
-	virtual void FromString(const std::string& fromString) override { };
+	virtual std::string ToString() const override 
+	{ 
+		std::stringstream ss;
+		ss << m_TrainingTimeStep << " " << m_FirstMoments.GetSize() << " ";
+		for (size_t t = 0; t < m_FirstMoments.GetSize(); t++)
+			ss << m_FirstMoments.GetData()[t] << " ";
+		for (size_t t = 0; t < m_SecondMoments.GetSize(); t++)
+			ss << m_SecondMoments.GetData()[t] << " ";
+		return ss.str();
+	}
+	virtual void FromString(const std::string& fromString) override 
+	{
+		std::stringstream ss(fromString);
+		size_t size;
+		ss >> m_TrainingTimeStep >> size;
+		m_FirstMoments = Tensor2D(size, 1);
+		m_SecondMoments = Tensor2D(size, 1);
+		for (size_t t = 0; t < size; t++)
+			ss >> m_FirstMoments.GetData()[t];
+		for (size_t t = 0; t < size; t++)
+			ss >> m_SecondMoments.GetData()[t];
+	};
+	
+	static std::string ClassName() { return "AdamOptimizer"; }
 private:
 	size_t m_TrainingTimeStep;
 	Tensor2D m_FirstMoments;
@@ -80,6 +112,21 @@ class OptimizerFactory
 {
 public:
 	OptimizerFactory(OptimizerType type) : m_Type(type) { }
+	OptimizerFactory() { }
+
+	std::unique_ptr<Optimizer> Get(const std::string& fromString)
+	{
+		std::stringstream ss(fromString);
+		std::string name;
+		ss >> name;
+		std::string remaining;
+		std::getline(ss, remaining);
+
+		if (name == SGDOptimizer::ClassName())		return std::make_unique<SGDOptimizer>(remaining);
+		if (name == AdamOptimizer::ClassName())		return std::make_unique<AdamOptimizer>(remaining);
+
+		throw std::exception("Unknown optimizer type!");
+	}
 
 	std::unique_ptr<Optimizer> Get(size_t numParams) const
 	{
@@ -94,8 +141,7 @@ public:
 		throw std::exception("Unknown optimizer type!");
 	}
 private:
-	OptimizerType m_Type;
+	OptimizerType m_Type = None;
 };
-
 
 namespace_end

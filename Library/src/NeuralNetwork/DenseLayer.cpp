@@ -111,6 +111,9 @@ std::string DenseLayer::ToString() const
 		ss << " " << m_Bias.GetData()[t];
 	}
 
+	ss << " { " << m_WeightsOptimizer->GetName() << " " << m_WeightsOptimizer->ToString() << "}";
+	ss << " { " << m_BiasOptimizer->GetName() << " " << m_BiasOptimizer->ToString() << "}";
+
 	return ss.str();
 }
 
@@ -127,25 +130,12 @@ void DenseLayer::FromString(const std::string& data)
 
 	std::stringstream ss(hyperparams);
 
-	std::string inputNodesStr;
-	std::string outputNodesStr;
 	std::string activationFStr;
 	std::string activationFParamsStr = hyperparams.substr(acivationParamsStart + 2, acivationParamsEnd - acivationParamsStart - 3);
-	ss >> inputNodesStr;
-	ss >> outputNodesStr;
-	ss >> activationFStr;
-
 	size_t inputNodes, outputNodes;
-
-	try
-	{
-		inputNodes = std::stoi(inputNodesStr);
-		outputNodes = std::stoi(outputNodesStr);
-	}
-	catch (...)
-	{
-		assert(false && "Invalid number.");
-	}
+	ss >> inputNodes;
+	ss >> outputNodes;
+	ss >> activationFStr;
 
 	m_Weights = Tensor2D(outputNodes, inputNodes);
 	m_Bias = Tensor2D(outputNodes, 1);
@@ -161,6 +151,20 @@ void DenseLayer::FromString(const std::string& data)
 	{
 		iss >> m_Bias.GetData()[i];
 	}
+
+	std::string remaining;
+	std::getline(iss, remaining);
+
+	size_t weightOptimizerStart = remaining.find('{');
+	size_t weightOptimizerEnd = remaining.find('}');
+	size_t biasOptimizerStart = remaining.find('{', weightOptimizerEnd);
+	size_t biasOptimizerEnd = remaining.find('}', biasOptimizerStart);
+	std::string weightOptimizerStr = remaining.substr(weightOptimizerStart + 1, weightOptimizerEnd - weightOptimizerStart - 2);
+	std::string biasOptimizerStr = remaining.substr(biasOptimizerStart + 1, biasOptimizerEnd - biasOptimizerStart - 2);
+
+	OptimizerFactory optimizerFactory;
+	m_WeightsOptimizer = optimizerFactory.Get(weightOptimizerStr);
+	m_BiasOptimizer = optimizerFactory.Get(biasOptimizerStr);
 }
 
 std::string DenseLayer::ToDebugString() const
@@ -187,58 +191,6 @@ std::string DenseLayer::Summarize() const
 
 	return ss.str();
 }
-
-//
-//std::vector<Tensor3D> DenseLayer::BackPropagation(const std::vector<Tensor3D>& inputs, const CostFunction& costFunction, float learningRate)
-//{
-//	assert(inputs.size() >= 1 && "No input!");
-//
-//	LayerShape shape = GetLayerShape();
-//
-//	std::vector<Tensor3D> sums(inputs.size());
-//	for (size_t t = 0; t < inputs.size(); t++)
-//	{
-//		sums.emplace_back(Tensor3D(shape.OutputRows, shape.OutputCols, shape.OutputDepth,
-//			std::move(MatrixMult(m_Weights, CreateWatcher((Tensor3D&)inputs[t], 0)).Add(m_Bias))
-//		));
-//	}
-//
-//	std::vector<Tensor3D> outputs(inputs.size());
-//	for (size_t t = 0; t < inputs.size(); t++)
-//		outputs.emplace_back(Tensor3D(shape.OutputRows, shape.OutputCols, shape.OutputDepth, std::move(Map(sums[t], m_ActivationFunction.Activation))));
-//
-//	std::vector<Tensor3D> costs = NextLayer ? NextLayer->BackPropagation(outputs, costFunction, learningRate) : std::vector<Tensor3D>(inputs.size());
-//	if (!NextLayer)
-//		for (size_t t = 0; t < inputs.size(); t++)
-//			costs.emplace_back(costFunction.DiffCost(outputs[t]));
-//
-//	for (size_t t = 0; t < inputs.size(); t++)
-//	{
-//		auto diffA = m_ActivationFunction.DiffActivation;
-//		sums[t].ElementWise(costs[t], [diffA](float v1, float v2) -> float {
-//			return v2 * diffA(v1);
-//			});
-//	}
-//
-//	Tensor2D gradWeights(m_Weights.GetRows(), m_Weights.GetCols());
-//	Tensor2D gradBias(m_Bias.GetRows(), m_Bias.GetCols());
-//	std::vector<Tensor3D> gradCosts(inputs.size());
-//	for (size_t t = 0; t < inputs.size(); t++)
-//	{
-//		gradWeights.Add(MatrixMultRightTranspose(CreateWatcher(sums[t], 0), CreateWatcher((Tensor3D&)inputs[t], 0)));
-//		gradWeights.Add(sums[t]);
-//		gradCosts.emplace_back(MatrixMultLeftTranspose(m_Weights, CreateWatcher(sums[t], 0)));
-//	}
-//
-//	size_t size = inputs.size();
-//	gradWeights.Map([learningRate, size](float v) -> float { return learningRate * v / (float)size; });
-//	gradBias.Map([learningRate, size](float v) -> float { return learningRate * v / (float)size; });
-//
-//	m_Weights.Sub(gradWeights);
-//	m_Bias.Sub(gradBias);
-//
-//	return gradCosts;
-//}
 
 
 namespace_end

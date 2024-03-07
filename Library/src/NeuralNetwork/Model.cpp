@@ -166,24 +166,29 @@ void Model::Summarize() const
 
 	std::shared_ptr<Layer> layer = m_RootLayer;
 
+	size_t numLearnables = 0;
+
 	while (layer)
 	{
 		LayerShape layerShape = layer->GetLayerShape();
 		ActivationFunciton activatin = layer->GetActivationFunction();
 		std::string special = layer->GetSepcialParams();
+		size_t learnables = layer->GetLearnableParams();
+		numLearnables += learnables;
 
 		std::cout << std::left;
 		std::cout << std::setw(28) << (layer->GetName() + ": ");
 		std::cout << std::setw(28) << ("Input: (" + std::to_string(layerShape.InputRows) + ", " + std::to_string(layerShape.InputCols) + ", " + std::to_string(layerShape.InputDepth) + ")" + ", ");
 		std::cout << std::setw(28) << ("Output: (" + std::to_string(layerShape.OutputRows) + ", " + std::to_string(layerShape.OutputCols) + ", " + std::to_string(layerShape.OutputDepth) + ")" + ", ");
 		std::cout << std::setw(32) << ("Activation: " + (activatin.Name.size() > 0 ? activatin.Name : "-") + " (" + (activatin.Params.size() > 0 ? activatin.Params : "-") + ")" + ", ");
-		std::cout << std::setw(28) << ("# Learnable params: " + std::to_string(layer->GetLearnableParams()) + ", ");
+		std::cout << std::setw(28) << ("# Learnable params: " + std::to_string(learnables) + ", ");
 		std::cout << std::setw(40) << ("Special: " + (special.size() > 0 ? special : "-"));
 		std::cout << std::endl << std::right;
 
-
 		layer = layer->NextLayer;
 	}
+	std::cout << "# Learnable parameters: " << numLearnables << std::endl;
+
 }
 
 const std::shared_ptr<Layer>& Model::GetLayer(size_t i)
